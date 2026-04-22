@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "189274994253",
+    "firebase_url": "https://pawscare-3b14d-default-rtdb.firebaseio.com",
+    "project_id": "pawscare-3b14d",
+    "storage_bucket": "pawscare-3b14d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:189274994253:android:31d3c0fd3098bf914a4e04",
+        "android_client_info": {
+          "package_name": "com.example.paws_care"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhATgJWdIubisZttOY4NkN9mSyrltoUnk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -90,4 +90,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'pawscare-3b14d.firebasestorage.app',
     measurementId: 'G-PYVHBCJW8W',
   );
+
 }

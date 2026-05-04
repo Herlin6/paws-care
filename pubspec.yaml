@@ -1,5 +1,5 @@
 name: paws_care
-description: "A new Flutter project."
+description: "Paws & Care - Platform pelaporan dan bantuan hewan jalanan"
 publish_to: "none"
 version: 0.1.0
 
@@ -10,8 +10,9 @@ dependencies:
   flutter:
     sdk: flutter
   firebase_core: ^3.1.0
+  cloud_firestore: ^5.0.0
   firebase_auth: ^5.0.0
-  firebase_database: ^11.0.0
+  image_picker: ^1.0.7
   intl: ^0.18.0
 
 dev_dependencies:

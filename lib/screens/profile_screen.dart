@@ -8,6 +8,7 @@ import 'package:paws_care/models/user_model.dart';
 import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/services/auth_service.dart';
 import 'package:paws_care/screens/login_screen.dart';
+import 'package:paws_care/screens/image_crop_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -46,25 +47,175 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _pickProfilePhoto() async {
+  void _showProfilePhotoOptions() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasPhoto = _user?.photoBase64.isNotEmpty == true;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey[400],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text('Foto Profil',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87)),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2994A).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.photo_library_outlined, color: Color(0xFFF2994A)),
+              ),
+              title: Text('Ubah Foto Profil',
+                style: TextStyle(fontWeight: FontWeight.w500, color: isDark ? Colors.white : Colors.black87)),
+              subtitle: Text('Pilih foto baru dari galeri',
+                style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickAndConfirmProfilePhoto();
+              },
+            ),
+            if (hasPhoto) ...[
+              const SizedBox(height: 4),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.delete_outline, color: Colors.red),
+                ),
+                title: const Text('Hapus Foto Profil',
+                  style: TextStyle(fontWeight: FontWeight.w500, color: Colors.red)),
+                subtitle: Text('Kembali ke foto default',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmDeletePhoto();
+                },
+              ),
+            ],
+            SizedBox(height: MediaQuery.of(ctx).padding.bottom + 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeletePhoto() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hapus Foto Profil?'),
+        content: const Text('Foto profil akan dihapus dan kembali ke foto default.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _service.updateUser(_currentUserId, {'photoBase64': ''});
+              _loadData();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Foto profil dihapus'), backgroundColor: Colors.red),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickAndConfirmProfilePhoto() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 400,
-      maxHeight: 400,
-      imageQuality: 35,
+      maxWidth: 600,
+      maxHeight: 600,
+      imageQuality: 50,
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       final bytes = await picked.readAsBytes();
-      final base64Str = base64Encode(bytes);
-      await _service.updateUser(_currentUserId, {'photoBase64': base64Str});
-      _loadData();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto profil diperbarui! ✅'), backgroundColor: Color(0xFF4CAF50)),
-        );
+      // Navigate to crop screen with square 1:1 ratio
+      final croppedBytes = await Navigator.push<Uint8List>(
+        context,
+        MaterialPageRoute(builder: (_) => ImageCropScreen(imageBytes: bytes, aspectRatio: 1.0)),
+      );
+      if (croppedBytes != null && mounted) {
+        final base64Str = base64Encode(croppedBytes);
+        _showPhotoConfirmation(croppedBytes, base64Str);
       }
     }
+  }
+
+  void _showPhotoConfirmation(Uint8List imageBytes, String base64Str) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Konfirmasi Foto Profil'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(60),
+              child: Image.memory(imageBytes, width: 120, height: 120, fit: BoxFit.cover),
+            ),
+            const SizedBox(height: 14),
+            Text('Gunakan foto ini sebagai foto profil?',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[300] : Colors.grey[600])),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _service.updateUser(_currentUserId, {'photoBase64': base64Str});
+              _loadData();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Foto profil diperbarui! ✅'), backgroundColor: Color(0xFF4CAF50)),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF2994A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showEditProfileDialog() {
@@ -246,7 +397,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 10),
                 // Avatar with photo
                 GestureDetector(
-                  onTap: _pickProfilePhoto,
+                  onTap: _showProfilePhotoOptions,
                   child: Stack(children: [
                     CircleAvatar(
                       radius: 48,

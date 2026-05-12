@@ -7,6 +7,7 @@ import 'package:paws_care/models/post_model.dart';
 import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/services/auth_service.dart';
 import 'package:paws_care/widgets/main_scaffold.dart';
+import 'package:paws_care/screens/image_crop_screen.dart';
 
 class AddPostScreen extends StatefulWidget {
   const AddPostScreen({super.key});
@@ -27,6 +28,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
   String _selectedCategory = 'Sakit';
   String _imageBase64 = '';
   Uint8List? _imageBytes;
+  Uint8List? _originalImageBytes;
   bool _isLoading = false;
   String _currentUsername = '';
 
@@ -62,15 +64,37 @@ class _AddPostScreenState extends State<AddPostScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 600,
-      maxHeight: 450,
-      imageQuality: 35,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 50,
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       final bytes = await picked.readAsBytes();
+      _originalImageBytes = bytes;
+      // Navigate to crop screen
+      final croppedBytes = await Navigator.push<Uint8List>(
+        context,
+        MaterialPageRoute(builder: (_) => ImageCropScreen(imageBytes: bytes)),
+      );
+      if (croppedBytes != null && mounted) {
+        setState(() {
+          _imageBytes = croppedBytes;
+          _imageBase64 = base64Encode(croppedBytes);
+        });
+      }
+    }
+  }
+
+  Future<void> _reCropImage() async {
+    if (_originalImageBytes == null) return;
+    final croppedBytes = await Navigator.push<Uint8List>(
+      context,
+      MaterialPageRoute(builder: (_) => ImageCropScreen(imageBytes: _originalImageBytes!)),
+    );
+    if (croppedBytes != null && mounted) {
       setState(() {
-        _imageBytes = bytes;
-        _imageBase64 = base64Encode(bytes);
+        _imageBytes = croppedBytes;
+        _imageBase64 = base64Encode(croppedBytes);
       });
     }
   }
@@ -107,22 +131,55 @@ class _AddPostScreenState extends State<AddPostScreen> {
     try {
       await _service.addPost(post);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Laporan berhasil dikirim! 🐾'),
-            backgroundColor: Color(0xFF4CAF50),
-          ),
-        );
         _titleController.clear();
         _descController.clear();
         _locationController.clear();
         setState(() {
           _imageBase64 = '';
           _imageBytes = null;
+          _originalImageBytes = null;
           _selectedCategory = 'Sakit';
         });
-        // Pindah ke halaman Home
-        MainScaffold.switchTab(0);
+        // Show success popup then go to Home
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 56),
+                ),
+                const SizedBox(height: 16),
+                const Text('Berhasil! 🐾', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('Laporan berhasil dikirim.', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+              ],
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4CAF50),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('OK'),
+                ),
+              ),
+            ],
+          ),
+        );
+        if (mounted) MainScaffold.switchTab(0);
       }
     } catch (e) {
       if (mounted) {
@@ -156,7 +213,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
             Text('Foto Hewan', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
             const SizedBox(height: 8),
             GestureDetector(
-              onTap: _pickImage,
+              onTap: _imageBytes != null ? _reCropImage : _pickImage,
               child: Container(
                 height: 200,
                 width: double.infinity,
@@ -166,9 +223,52 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   border: Border.all(color: const Color(0xFFF6D58A), width: 1.5),
                 ),
                 child: _imageBytes != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Image.memory(_imageBytes!, fit: BoxFit.cover, width: double.infinity),
+                    ? Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Image.memory(_imageBytes!, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
+                          ),
+                          Positioned(
+                            bottom: 8, left: 8,
+                            child: GestureDetector(
+                              onTap: _pickImage,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.6),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.photo_library, color: Colors.white, size: 14),
+                                    SizedBox(width: 4),
+                                    Text('Ganti foto', style: TextStyle(color: Colors.white, fontSize: 11)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 8, right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.crop, color: Colors.white, size: 14),
+                                  SizedBox(width: 4),
+                                  Text('Crop ulang', style: TextStyle(color: Colors.white, fontSize: 11)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       )
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,

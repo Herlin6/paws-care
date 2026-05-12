@@ -286,10 +286,24 @@ class _DetailScreenState extends State<DetailScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Color(0xFFF2994A)));
           final post = snapshot.data;
           if (post == null) return const Center(child: Text('Post tidak ditemukan'));
-          return Column(children: [
-            Expanded(child: _buildContent(post, isDark)),
-            _buildCommentInput(isDark),
-          ]);
+          return Stack(
+            children: [
+              _buildContent(post, isDark),
+              // Floating fixed back button
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 8,
+                left: 12,
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle),
+                    child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          );
         },
       ),
     );
@@ -315,31 +329,35 @@ class _DetailScreenState extends State<DetailScreen> {
             child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(color: _statusColor(post.status), borderRadius: BorderRadius.circular(16)),
               child: Text(post.status, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)))),
-          Positioned(top: MediaQuery.of(context).padding.top + 8, left: 12,
-            child: GestureDetector(onTap: () => Navigator.pop(context),
-              child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.black.withOpacity(0.3), shape: BoxShape.circle),
-                child: const Icon(Icons.arrow_back, color: Colors.white, size: 20)))),
-          if (canEditDelete)
-            Positioned(top: MediaQuery.of(context).padding.top + 8, right: 100,
-              child: Row(children: [
-                GestureDetector(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditPostScreen(post: post))),
-                  child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.black.withOpacity(0.3), shape: BoxShape.circle),
-                    child: const Icon(Icons.edit, color: Colors.white, size: 18))),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => _deletePost(post),
-                  child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.red.withOpacity(0.7), shape: BoxShape.circle),
-                    child: const Icon(Icons.delete, color: Colors.white, size: 18))),
-              ])),
         ]),
       ),
+      // Title row with edit/delete buttons on the right
       SliverToBoxAdapter(
-        child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(post.title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
-          const SizedBox(height: 6),
-          Text('oleh ${post.username}  •  ${_timeAgo(post.createdAt)}', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
-          const SizedBox(height: 14),
+        child: Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 0), child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(post.title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+              const SizedBox(height: 6),
+              Text('oleh ${post.username}  •  ${_timeAgo(post.createdAt)}', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+            ])),
+            if (canEditDelete) ...[
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditPostScreen(post: post))),
+                child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF2994A).withOpacity(0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.edit, color: Color(0xFFF2994A), size: 18))),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () => _deletePost(post),
+                child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.delete, color: Colors.red, size: 18))),
+            ],
+          ],
+        )),
+      ),
+      SliverToBoxAdapter(
+        child: Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(post.description, style: TextStyle(fontSize: 14, height: 1.5, color: isDark ? Colors.grey[300] : Colors.grey[700])),
           const SizedBox(height: 16),
           // Location
@@ -414,6 +432,7 @@ class _DetailScreenState extends State<DetailScreen> {
           ],
           const SizedBox(height: 20),
           _buildCommentsSection(isDark),
+          const SizedBox(height: 16),
         ])),
       ),
     ]);
@@ -453,29 +472,26 @@ class _DetailScreenState extends State<DetailScreen> {
                 ]),
               );
             }),
+          const SizedBox(height: 12),
+          // Comment input inline in section
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(children: [
+              Expanded(child: TextField(controller: _commentController,
+                style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
+                decoration: InputDecoration(hintText: 'Tulis komentar...', hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: Colors.grey[300]!)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Color(0xFFF2994A))),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), isDense: true))),
+              const SizedBox(width: 8),
+              GestureDetector(onTap: _sendComment,
+                child: Container(padding: const EdgeInsets.all(10), decoration: const BoxDecoration(color: Color(0xFFF2994A), shape: BoxShape.circle),
+                  child: const Icon(Icons.send, color: Colors.white, size: 20))),
+            ]),
+          ),
         ]);
       },
-    );
-  }
-
-  Widget _buildCommentInput(bool isDark) {
-    return Container(
-      padding: EdgeInsets.only(left: 16, right: 8, top: 8, bottom: MediaQuery.of(context).padding.bottom + 8),
-      decoration: BoxDecoration(color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, -2))]),
-      child: Row(children: [
-        Expanded(child: TextField(controller: _commentController,
-          style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
-          decoration: InputDecoration(hintText: 'Tulis komentar...', hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: Colors.grey[300]!)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Color(0xFFF2994A))),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), isDense: true))),
-        const SizedBox(width: 8),
-        GestureDetector(onTap: _sendComment,
-          child: Container(padding: const EdgeInsets.all(10), decoration: const BoxDecoration(color: Color(0xFFF2994A), shape: BoxShape.circle),
-            child: const Icon(Icons.send, color: Colors.white, size: 20))),
-      ]),
     );
   }
 }

@@ -19,14 +19,19 @@ class FavoriteScreen extends StatelessWidget {
       appBar: AppBar(
         title: Row(
           children: [
-            Icon(Icons.favorite, color: Colors.red[400], size: 22),
-            const SizedBox(width: 8),
-            const Text('Favorit', style: TextStyle(fontWeight: FontWeight.bold)),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(color: Colors.red.withAlpha(25), borderRadius: BorderRadius.circular(8)),
+              child: Icon(Icons.favorite_rounded, color: Colors.red[400], size: 18),
+            ),
+            const SizedBox(width: 10),
+            const Text('Favorit', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ],
         ),
         backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         foregroundColor: isDark ? Colors.white : Colors.black87,
-        elevation: 0.5,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       body: StreamBuilder<List<PostModel>>(
         stream: service.streamFavoritePosts(currentUserId),
@@ -40,11 +45,18 @@ class FavoriteScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.favorite_border, size: 64, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
-                  Text('Belum ada favorit', style: TextStyle(fontSize: 16, color: Colors.grey[400])),
-                  const SizedBox(height: 8),
-                  Text('Tekan ❤️ pada laporan untuk menyimpan', style: TextStyle(fontSize: 13, color: Colors.grey[350])),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFFFF3E0),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.favorite_border_rounded, size: 48, color: Colors.grey[400]),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Belum ada favorit', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                  const SizedBox(height: 6),
+                  Text('Tekan ❤️ pada laporan untuk menyimpan', style: TextStyle(fontSize: 13, color: Colors.grey[400])),
                 ],
               ),
             );

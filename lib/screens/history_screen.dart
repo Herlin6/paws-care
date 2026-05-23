@@ -20,14 +20,19 @@ class HistoryScreen extends StatelessWidget {
       appBar: AppBar(
         title: Row(
           children: [
-            Icon(Icons.history, color: const Color(0xFFF2994A), size: 22),
-            const SizedBox(width: 8),
-            const Text('Riwayat', style: TextStyle(fontWeight: FontWeight.bold)),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(color: const Color(0xFFF2994A).withAlpha(25), borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.history_rounded, color: Color(0xFFF2994A), size: 18),
+            ),
+            const SizedBox(width: 10),
+            const Text('Riwayat', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ],
         ),
         backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         foregroundColor: isDark ? Colors.white : Colors.black87,
-        elevation: 0.5,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       body: StreamBuilder<List<PostModel>>(
         stream: service.streamPosts(),
@@ -43,11 +48,18 @@ class HistoryScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.history, size: 64, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
-                  Text('Belum ada riwayat posting', style: TextStyle(fontSize: 16, color: Colors.grey[400])),
-                  const SizedBox(height: 8),
-                  Text('Buat laporan pertamamu!', style: TextStyle(fontSize: 13, color: Colors.grey[350])),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFFFF3E0),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.history_rounded, size: 48, color: Colors.grey[400]),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Belum ada riwayat', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                  const SizedBox(height: 6),
+                  Text('Buat laporan pertamamu!', style: TextStyle(fontSize: 13, color: Colors.grey[400])),
                 ],
               ),
             );
@@ -66,10 +78,17 @@ class HistoryScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 24),
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.red[400],
-                    borderRadius: BorderRadius.circular(16),
+                    gradient: const LinearGradient(colors: [Color(0xFFFF6B6B), Color(0xFFE53935)]),
+                    borderRadius: BorderRadius.circular(18),
                   ),
-                  child: const Icon(Icons.delete, color: Colors.white, size: 28),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.delete_rounded, color: Colors.white, size: 28),
+                      SizedBox(height: 4),
+                      Text('Hapus', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
                 ),
                 confirmDismiss: (_) async {
                   return await showDialog<bool>(
@@ -82,7 +101,7 @@ class HistoryScreen extends StatelessWidget {
                         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
                         ElevatedButton(
                           onPressed: () => Navigator.pop(ctx, true),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                           child: const Text('Hapus', style: TextStyle(color: Colors.white)),
                         ),
                       ],
@@ -92,7 +111,12 @@ class HistoryScreen extends StatelessWidget {
                 onDismissed: (_) {
                   service.deletePost(post.postId);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Laporan dihapus'), backgroundColor: Colors.red),
+                    SnackBar(
+                      content: const Text('Laporan dihapus'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
                   );
                 },
                 child: PostCard(
@@ -112,7 +136,7 @@ class HistoryScreen extends StatelessWidget {
                           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
                           ElevatedButton(
                             onPressed: () => Navigator.pop(ctx, true),
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                             child: const Text('Hapus', style: TextStyle(color: Colors.white)),
                           ),
                         ],

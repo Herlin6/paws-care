@@ -73,16 +73,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFF6D58A), Color(0xFFFFF8E7), Color(0xFFFFFFFF)],
-            stops: [0.0, 0.4, 1.0],
+            colors: isDark
+                ? [const Color(0xFF3A3020), const Color(0xFF1E1E1E), const Color(0xFF121212)]
+                : [const Color(0xFFF6D58A), const Color(0xFFFFF8E7), const Color(0xFFFFFFFF)],
+            stops: const [0.0, 0.4, 1.0],
           ),
         ),
         child: SafeArea(
@@ -95,30 +99,30 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Icon(Icons.pets, size: 56, color: Color(0xFFF2994A)),
                 const SizedBox(height: 16),
                 RichText(
-                  text: const TextSpan(
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  text: TextSpan(
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                     children: [
-                      TextSpan(text: 'Paws ', style: TextStyle(color: Color(0xFF333333))),
-                      TextSpan(text: '& ', style: TextStyle(color: Color(0xFFF2994A))),
-                      TextSpan(text: 'Care', style: TextStyle(color: Color(0xFF333333))),
+                      TextSpan(text: 'Paws ', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF333333))),
+                      const TextSpan(text: '& ', style: TextStyle(color: Color(0xFFF2994A))),
+                      TextSpan(text: 'Care', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF333333))),
                     ],
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Selamatkan & rawat hewan di sekitarmu 🐾',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF666666)),
                 ),
                 const SizedBox(height: 48),
                 // Form card
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
+                        color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
                         blurRadius: 20,
                         offset: const Offset(0, 4),
                       ),
@@ -127,21 +131,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Email', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      Text('Email', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                         decoration: InputDecoration(
                           hintText: 'email@contoh.com',
                           hintStyle: TextStyle(color: Colors.grey[400]),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
+                            borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
+                            borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -151,21 +158,24 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const Text('Password', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      Text('Password', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                         decoration: InputDecoration(
                           hintText: '••••••••',
                           hintStyle: TextStyle(color: Colors.grey[400]),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
+                            borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
+                            borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -207,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('Belum punya akun? ', style: TextStyle(fontSize: 13, color: Color(0xFF666666))),
+                          Text('Belum punya akun? ', style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF666666))),
                           GestureDetector(
                             onTap: () => Navigator.push(
                               context,

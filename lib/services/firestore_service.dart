@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:paws_care/models/post_model.dart';
 import 'package:paws_care/models/comment_model.dart';
 import 'package:paws_care/models/user_model.dart';
@@ -26,11 +27,58 @@ class FirestoreService {
     await docRef.set(postWithId.toMap());
   }
 
+  /// Update a post with backend validation:
+  /// - Only the post owner can edit their own post.
+  /// - Admin CANNOT edit posts belonging to other users.
   Future<void> updatePost(String postId, Map<String, dynamic> data) async {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUid == null) {
+      throw Exception('Anda harus login terlebih dahulu.');
+    }
+
+    // Fetch the post to check ownership
+    final postDoc = await _db.collection('posts').doc(postId).get();
+    if (!postDoc.exists) {
+      throw Exception('Postingan tidak ditemukan.');
+    }
+
+    final postOwnerId = postDoc.data()?['userId'] ?? '';
+
+    // Only allow edit if the current user is the post owner
+    if (currentUid != postOwnerId) {
+      throw Exception('Forbidden: Anda tidak boleh mengedit postingan milik user lain.');
+    }
+
     await _db.collection('posts').doc(postId).update(data);
   }
 
+  /// Delete a post with backend validation:
+  /// - Post owner can delete their own post.
+  /// - Admin can delete any post.
   Future<void> deletePost(String postId) async {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUid == null) {
+      throw Exception('Anda harus login terlebih dahulu.');
+    }
+
+    // Fetch the post to check ownership
+    final postDoc = await _db.collection('posts').doc(postId).get();
+    if (!postDoc.exists) {
+      throw Exception('Postingan tidak ditemukan.');
+    }
+
+    final postOwnerId = postDoc.data()?['userId'] ?? '';
+
+    // If not the owner, check if user is admin
+    if (currentUid != postOwnerId) {
+      final userDoc = await _db.collection('users').doc(currentUid).get();
+      final userRole = userDoc.data()?['role'] ?? 'Pengguna';
+      if (userRole != 'Admin') {
+        throw Exception('Forbidden: Anda tidak memiliki izin untuk menghapus postingan ini.');
+      }
+    }
+
+    // Delete associated comments
     final commentsSnapshot = await _db
         .collection('comments')
         .where('postId', isEqualTo: postId)

@@ -20,17 +20,29 @@ class _EditPostScreenState extends State<EditPostScreen> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
   late TextEditingController _locationController;
-  late String _selectedCategory;
+  late List<String> _selectedCategories;
+  late String _selectedAnimalType;
   late String _imageBase64;
   Uint8List? _imageBytes;
   Uint8List? _originalImageBytes;
   bool _isLoading = false;
 
   final List<Map<String, String>> _categories = [
-    {'label': 'Sakit', 'emoji': '🩹'},
-    {'label': 'Kelaparan', 'emoji': '🍽️'},
-    {'label': 'Adopsi', 'emoji': '🏠'},
-    {'label': 'Sterilisasi', 'emoji': '✂️'},
+    {'label': 'Hilang', 'emoji': '🔍'},
+    {'label': 'Ditemukan', 'emoji': '🤝'},
+    {'label': 'Kecelakaan', 'emoji': '🚨'},
+    {'label': 'Mati', 'emoji': '🪦'},
+    {'label': 'Terjebak', 'emoji': '🕸️'},
+    {'label': 'Lainnya', 'emoji': '🐾'},
+  ];
+
+  final List<Map<String, String>> _animalTypes = [
+    {'label': 'Kucing', 'emoji': '🐱'},
+    {'label': 'Anjing', 'emoji': '🐶'},
+    {'label': 'Burung', 'emoji': '🐦'},
+    {'label': 'Kelinci', 'emoji': '🐰'},
+    {'label': 'Reptil', 'emoji': '🦎'},
+    {'label': 'Lainnya', 'emoji': '🐾'},
   ];
 
   @override
@@ -39,7 +51,8 @@ class _EditPostScreenState extends State<EditPostScreen> {
     _titleController = TextEditingController(text: widget.post.title);
     _descController = TextEditingController(text: widget.post.description);
     _locationController = TextEditingController(text: widget.post.locationText);
-    _selectedCategory = widget.post.category;
+    _selectedCategories = List<String>.from(widget.post.categories);
+    _selectedAnimalType = widget.post.animalType;
     _imageBase64 = widget.post.imageBase64;
     if (_imageBase64.isNotEmpty) {
       try {
@@ -90,6 +103,16 @@ class _EditPostScreenState extends State<EditPostScreen> {
     }
   }
 
+  void _toggleCategory(String label) {
+    setState(() {
+      if (_selectedCategories.contains(label)) {
+        _selectedCategories.remove(label);
+      } else {
+        _selectedCategories.add(label);
+      }
+    });
+  }
+
   Future<void> _submit() async {
     final title = _titleController.text.trim();
     final desc = _descController.text.trim();
@@ -97,12 +120,18 @@ class _EditPostScreenState extends State<EditPostScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Judul dan deskripsi wajib diisi!')));
       return;
     }
+    if (_selectedCategories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih minimal satu kategori!')));
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       await _service.updatePost(widget.post.postId, {
         'title': title,
         'description': desc,
-        'category': _selectedCategory,
+        'categories': _selectedCategories,
+        'category': _selectedCategories.isNotEmpty ? _selectedCategories.first : '',
+        'animalType': _selectedAnimalType,
         'locationText': _locationController.text.trim(),
         'imageBase64': _imageBase64,
       });
@@ -151,7 +180,54 @@ class _EditPostScreenState extends State<EditPostScreen> {
         }
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+      if (mounted) {
+        final errorMsg = e.toString().replaceFirst('Exception: ', '');
+        // Show forbidden-style dialog if it's a permission error
+        if (errorMsg.contains('Forbidden')) {
+          await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.block, color: Colors.red, size: 56),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Akses Ditolak 🚫', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(errorMsg, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                ],
+              ),
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('OK'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $errorMsg')));
+        }
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -235,24 +311,66 @@ class _EditPostScreenState extends State<EditPostScreen> {
             const SizedBox(height: 8),
             TextField(controller: _descController, maxLines: 4, style: TextStyle(color: isDark ? Colors.white : Colors.black87), decoration: _inputDeco('Jelaskan kondisi hewan...', isDark)),
             const SizedBox(height: 20),
+            // --- Kategori (multi-select) ---
             Text('Kategori', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
+            const SizedBox(height: 4),
+            Text('Pilih satu atau lebih kategori', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: _categories.map((cat) {
-                final sel = _selectedCategory == cat['label'];
+                final isSelected = _selectedCategories.contains(cat['label']);
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedCategory = cat['label']!),
-                  child: Container(
+                  onTap: () => _toggleCategory(cat['label']!),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: sel ? const Color(0xFFF2994A) : isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                      color: isSelected ? const Color(0xFFF2994A) : isDark ? const Color(0xFF2C2C2C) : Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: sel ? const Color(0xFFF2994A) : Colors.grey[300]!),
+                      border: Border.all(color: isSelected ? const Color(0xFFF2994A) : Colors.grey[300]!),
                     ),
-                    child: Text('${cat['emoji']} ${cat['label']}',
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isSelected) ...[
+                          const Icon(Icons.check, color: Colors.white, size: 16),
+                          const SizedBox(width: 4),
+                        ],
+                        Text('${cat['emoji']} ${cat['label']}',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.white : isDark ? Colors.grey[300] : Colors.black87)),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            // --- Jenis Hewan ---
+            Text('Jenis Hewan', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
+            const SizedBox(height: 4),
+            Text('Pilih jenis hewan', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _animalTypes.map((animal) {
+                final isSelected = _selectedAnimalType == animal['label'];
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedAnimalType = animal['label']!),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF4CAF50) : isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[300]!),
+                    ),
+                    child: Text('${animal['emoji']} ${animal['label']}',
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                        color: sel ? Colors.white : isDark ? Colors.grey[300] : Colors.black87)),
+                        color: isSelected ? Colors.white : isDark ? Colors.grey[300] : Colors.black87)),
                   ),
                 );
               }).toList(),

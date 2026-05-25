@@ -29,12 +29,30 @@ class PostCard extends StatelessWidget {
     }
   }
 
-  String _categoryEmoji() {
-    switch (post.category) {
+  String _categoryEmoji(String cat) {
+    switch (cat) {
+      case 'Hilang': return '🔍';
+      case 'Ditemukan': return '🤝';
+      case 'Kecelakaan': return '🚨';
+      case 'Mati': return '🪦';
+      case 'Terjebak': return '🕸️';
+      case 'Lainnya': return '🐾';
+      // Legacy categories
       case 'Sakit': return '🩹';
       case 'Kelaparan': return '🍽️';
       case 'Adopsi': return '🏠';
       case 'Sterilisasi': return '✂️';
+      default: return '🐾';
+    }
+  }
+
+  String _animalEmoji(String animal) {
+    switch (animal) {
+      case 'Kucing': return '🐱';
+      case 'Anjing': return '🐶';
+      case 'Burung': return '🐦';
+      case 'Kelinci': return '🐰';
+      case 'Reptil': return '🦎';
       default: return '🐾';
     }
   }
@@ -95,24 +113,30 @@ class PostCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Category badge
+                // Category badges (multi-category)
                 Positioned(
                   top: 12, left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.black87 : Colors.white.withAlpha(235),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 4)],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_categoryEmoji(), style: const TextStyle(fontSize: 13)),
-                        const SizedBox(width: 4),
-                        Text(post.category, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
-                      ],
-                    ),
+                  child: Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: post.categories.take(3).map((cat) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.black87 : Colors.white.withAlpha(235),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 4)],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(_categoryEmoji(cat), style: const TextStyle(fontSize: 11)),
+                            const SizedBox(width: 3),
+                            Text(cat, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
                 // Favorite button
@@ -195,6 +219,23 @@ class PostCard extends StatelessWidget {
                   const SizedBox(height: 10),
                   Row(
                     children: [
+                      // Animal type badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4CAF50).withAlpha(25),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(_animalEmoji(post.animalType), style: const TextStyle(fontSize: 12)),
+                            const SizedBox(width: 3),
+                            Text(post.animalType, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF4CAF50))),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Icon(Icons.location_on_outlined, size: 14, color: isDark ? Colors.grey[500] : Colors.grey[400]),
                       const SizedBox(width: 3),
                       Expanded(

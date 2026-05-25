@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 
 class ImageCropScreen extends StatefulWidget {
   final Uint8List imageBytes;
+
   /// Aspect ratio for crop area (width / height). Default 16:9 landscape to match post card display.
   final double aspectRatio;
-  const ImageCropScreen({super.key, required this.imageBytes, this.aspectRatio = 16 / 9});
+  const ImageCropScreen(
+      {super.key, required this.imageBytes, this.aspectRatio = 16 / 9});
 
   @override
   State<ImageCropScreen> createState() => _ImageCropScreenState();
@@ -142,17 +144,22 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Crop Foto', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+        title: const Text('Crop Foto',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context)),
         actions: [
           TextButton(
             onPressed: () async {
               final box = context.findRenderObject() as RenderBox?;
               if (box == null) return;
               // area = full body minus appbar
-              final appBarH = AppBar().preferredSize.height + MediaQuery.of(context).padding.top;
+              final appBarH = AppBar().preferredSize.height +
+                  MediaQuery.of(context).padding.top;
               final bottomH = 52.0; // hint bar height
-              final area = Size(box.size.width, box.size.height - appBarH - bottomH);
+              final area =
+                  Size(box.size.width, box.size.height - appBarH - bottomH);
               final result = await _doCrop(area);
               if (result != null && context.mounted) {
                 Navigator.pop(context, result);
@@ -160,17 +167,23 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
                 Navigator.pop(context, widget.imageBytes);
               }
             },
-            child: const Text('Selesai', style: TextStyle(color: Color(0xFFF2994A), fontWeight: FontWeight.bold, fontSize: 16)),
+            child: const Text('Selesai',
+                style: TextStyle(
+                    color: Color(0xFFF2994A),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16)),
           ),
         ],
       ),
       body: !_loaded
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFF2994A)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFF2994A)))
           : Column(
               children: [
                 Expanded(
                   child: LayoutBuilder(builder: (context, constraints) {
-                    final area = Size(constraints.maxWidth, constraints.maxHeight);
+                    final area =
+                        Size(constraints.maxWidth, constraints.maxHeight);
                     final crop = _cropRect(area);
                     return Stack(
                       children: [
@@ -180,11 +193,13 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
                             transformationController: _controller,
                             minScale: 0.5,
                             maxScale: 5.0,
-                            child: Image.memory(widget.imageBytes, fit: BoxFit.contain),
+                            child: Image.memory(widget.imageBytes,
+                                fit: BoxFit.contain),
                           ),
                         ),
                         // Dim overlay outside crop
-                        IgnorePointer(child: CustomPaint(
+                        IgnorePointer(
+                            child: CustomPaint(
                           size: area,
                           painter: _CropOverlayPainter(cropRect: crop),
                         )),
@@ -195,11 +210,15 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
                 Container(
                   height: 52,
                   color: Colors.black,
-                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.pinch, color: Colors.grey[500], size: 20),
-                    const SizedBox(width: 8),
-                    Text('Geser dan zoom untuk memilih area', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
-                  ]),
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.pinch, color: Colors.grey[500], size: 20),
+                        const SizedBox(width: 8),
+                        Text('Geser dan zoom untuk memilih area',
+                            style: TextStyle(
+                                color: Colors.grey[500], fontSize: 13)),
+                      ]),
                 ),
               ],
             ),
@@ -219,11 +238,19 @@ class _CropOverlayPainter extends CustomPainter {
     // Top
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, cropRect.top), dimPaint);
     // Bottom
-    canvas.drawRect(Rect.fromLTWH(0, cropRect.bottom, size.width, size.height - cropRect.bottom), dimPaint);
+    canvas.drawRect(
+        Rect.fromLTWH(
+            0, cropRect.bottom, size.width, size.height - cropRect.bottom),
+        dimPaint);
     // Left
-    canvas.drawRect(Rect.fromLTWH(0, cropRect.top, cropRect.left, cropRect.height), dimPaint);
+    canvas.drawRect(
+        Rect.fromLTWH(0, cropRect.top, cropRect.left, cropRect.height),
+        dimPaint);
     // Right
-    canvas.drawRect(Rect.fromLTWH(cropRect.right, cropRect.top, size.width - cropRect.right, cropRect.height), dimPaint);
+    canvas.drawRect(
+        Rect.fromLTWH(cropRect.right, cropRect.top, size.width - cropRect.right,
+            cropRect.height),
+        dimPaint);
 
     // Border
     final borderPaint = Paint()
@@ -242,10 +269,12 @@ class _CropOverlayPainter extends CustomPainter {
     for (int i = 1; i < 3; i++) {
       // Vertical
       final x = cropRect.left + thirdW * i;
-      canvas.drawLine(Offset(x, cropRect.top), Offset(x, cropRect.bottom), gridPaint);
+      canvas.drawLine(
+          Offset(x, cropRect.top), Offset(x, cropRect.bottom), gridPaint);
       // Horizontal
       final y = cropRect.top + thirdH * i;
-      canvas.drawLine(Offset(cropRect.left, y), Offset(cropRect.right, y), gridPaint);
+      canvas.drawLine(
+          Offset(cropRect.left, y), Offset(cropRect.right, y), gridPaint);
     }
 
     // Corner handles
@@ -257,19 +286,28 @@ class _CropOverlayPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     // Top-left
-    canvas.drawLine(Offset(cropRect.left, cropRect.top), Offset(cropRect.left + handleLen, cropRect.top), handlePaint);
-    canvas.drawLine(Offset(cropRect.left, cropRect.top), Offset(cropRect.left, cropRect.top + handleLen), handlePaint);
+    canvas.drawLine(Offset(cropRect.left, cropRect.top),
+        Offset(cropRect.left + handleLen, cropRect.top), handlePaint);
+    canvas.drawLine(Offset(cropRect.left, cropRect.top),
+        Offset(cropRect.left, cropRect.top + handleLen), handlePaint);
     // Top-right
-    canvas.drawLine(Offset(cropRect.right, cropRect.top), Offset(cropRect.right - handleLen, cropRect.top), handlePaint);
-    canvas.drawLine(Offset(cropRect.right, cropRect.top), Offset(cropRect.right, cropRect.top + handleLen), handlePaint);
+    canvas.drawLine(Offset(cropRect.right, cropRect.top),
+        Offset(cropRect.right - handleLen, cropRect.top), handlePaint);
+    canvas.drawLine(Offset(cropRect.right, cropRect.top),
+        Offset(cropRect.right, cropRect.top + handleLen), handlePaint);
     // Bottom-left
-    canvas.drawLine(Offset(cropRect.left, cropRect.bottom), Offset(cropRect.left + handleLen, cropRect.bottom), handlePaint);
-    canvas.drawLine(Offset(cropRect.left, cropRect.bottom), Offset(cropRect.left, cropRect.bottom - handleLen), handlePaint);
+    canvas.drawLine(Offset(cropRect.left, cropRect.bottom),
+        Offset(cropRect.left + handleLen, cropRect.bottom), handlePaint);
+    canvas.drawLine(Offset(cropRect.left, cropRect.bottom),
+        Offset(cropRect.left, cropRect.bottom - handleLen), handlePaint);
     // Bottom-right
-    canvas.drawLine(Offset(cropRect.right, cropRect.bottom), Offset(cropRect.right - handleLen, cropRect.bottom), handlePaint);
-    canvas.drawLine(Offset(cropRect.right, cropRect.bottom), Offset(cropRect.right, cropRect.bottom - handleLen), handlePaint);
+    canvas.drawLine(Offset(cropRect.right, cropRect.bottom),
+        Offset(cropRect.right - handleLen, cropRect.bottom), handlePaint);
+    canvas.drawLine(Offset(cropRect.right, cropRect.bottom),
+        Offset(cropRect.right, cropRect.bottom - handleLen), handlePaint);
   }
 
   @override
-  bool shouldRepaint(covariant _CropOverlayPainter old) => old.cropRect != cropRect;
+  bool shouldRepaint(covariant _CropOverlayPainter old) =>
+      old.cropRect != cropRect;
 }

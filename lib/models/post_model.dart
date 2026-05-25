@@ -7,7 +7,8 @@ class PostModel {
   final String title;
   final String description;
   final String imageBase64;
-  final String category;
+  final List<String> categories;
+  final String animalType;
   final String locationText;
   final String status;
   final DateTime createdAt;
@@ -17,6 +18,9 @@ class PostModel {
   final String completionNote;
   final String completedByUid;
 
+  /// Getter for backward compatibility — returns first category or empty string
+  String get category => categories.isNotEmpty ? categories.first : '';
+
   PostModel({
     required this.postId,
     required this.userId,
@@ -24,7 +28,8 @@ class PostModel {
     required this.title,
     required this.description,
     this.imageBase64 = '',
-    required this.category,
+    this.categories = const [],
+    this.animalType = 'Lainnya',
     this.locationText = '',
     this.status = 'Butuh Bantuan',
     required this.createdAt,
@@ -43,7 +48,9 @@ class PostModel {
       'title': title,
       'description': description,
       'imageBase64': imageBase64,
-      'category': category,
+      'categories': categories,
+      'category': category, // backward compat: keep legacy single field
+      'animalType': animalType,
       'locationText': locationText,
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -56,6 +63,16 @@ class PostModel {
   }
 
   factory PostModel.fromMap(Map<String, dynamic> map, String docId) {
+    // Support both new 'categories' list and legacy single 'category' string
+    List<String> cats;
+    if (map['categories'] != null && map['categories'] is List) {
+      cats = List<String>.from(map['categories']);
+    } else if (map['category'] != null && (map['category'] as String).isNotEmpty) {
+      cats = [map['category'] as String];
+    } else {
+      cats = [];
+    }
+
     return PostModel(
       postId: docId,
       userId: map['userId'] ?? '',
@@ -63,7 +80,8 @@ class PostModel {
       title: map['title'] ?? '',
       description: map['description'] ?? '',
       imageBase64: map['imageBase64'] ?? '',
-      category: map['category'] ?? '',
+      categories: cats,
+      animalType: map['animalType'] ?? 'Lainnya',
       locationText: map['locationText'] ?? '',
       status: map['status'] ?? 'Butuh Bantuan',
       createdAt: map['createdAt'] != null
@@ -84,7 +102,8 @@ class PostModel {
     String? title,
     String? description,
     String? imageBase64,
-    String? category,
+    List<String>? categories,
+    String? animalType,
     String? locationText,
     String? status,
     DateTime? createdAt,
@@ -101,7 +120,8 @@ class PostModel {
       title: title ?? this.title,
       description: description ?? this.description,
       imageBase64: imageBase64 ?? this.imageBase64,
-      category: category ?? this.category,
+      categories: categories ?? this.categories,
+      animalType: animalType ?? this.animalType,
       locationText: locationText ?? this.locationText,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,

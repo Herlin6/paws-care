@@ -25,7 +25,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
   String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  String _selectedCategory = 'Sakit';
+  List<String> _selectedCategories = [];
+  String _selectedAnimalType = 'Kucing';
   String _imageBase64 = '';
   Uint8List? _imageBytes;
   Uint8List? _originalImageBytes;
@@ -33,10 +34,21 @@ class _AddPostScreenState extends State<AddPostScreen> {
   String _currentUsername = '';
 
   final List<Map<String, String>> _categories = [
-    {'label': 'Sakit', 'emoji': '🩹'},
-    {'label': 'Kelaparan', 'emoji': '🍽️'},
-    {'label': 'Adopsi', 'emoji': '🏠'},
-    {'label': 'Sterilisasi', 'emoji': '✂️'},
+    {'label': 'Hilang', 'emoji': '🔍'},
+    {'label': 'Ditemukan', 'emoji': '🤝'},
+    {'label': 'Kecelakaan', 'emoji': '🚨'},
+    {'label': 'Mati', 'emoji': '🪦'},
+    {'label': 'Terjebak', 'emoji': '🕸️'},
+    {'label': 'Lainnya', 'emoji': '🐾'},
+  ];
+
+  final List<Map<String, String>> _animalTypes = [
+    {'label': 'Kucing', 'emoji': '🐱'},
+    {'label': 'Anjing', 'emoji': '🐶'},
+    {'label': 'Burung', 'emoji': '🐦'},
+    {'label': 'Kelinci', 'emoji': '🐰'},
+    {'label': 'Reptil', 'emoji': '🦎'},
+    {'label': 'Lainnya', 'emoji': '🐾'},
   ];
 
   @override
@@ -99,6 +111,16 @@ class _AddPostScreenState extends State<AddPostScreen> {
     }
   }
 
+  void _toggleCategory(String label) {
+    setState(() {
+      if (_selectedCategories.contains(label)) {
+        _selectedCategories.remove(label);
+      } else {
+        _selectedCategories.add(label);
+      }
+    });
+  }
+
   Future<void> _submit() async {
     final title = _titleController.text.trim();
     final desc = _descController.text.trim();
@@ -107,6 +129,13 @@ class _AddPostScreenState extends State<AddPostScreen> {
     if (title.isEmpty || desc.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Judul dan deskripsi wajib diisi!')),
+      );
+      return;
+    }
+
+    if (_selectedCategories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih minimal satu kategori!')),
       );
       return;
     }
@@ -120,7 +149,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
       title: title,
       description: desc,
       imageBase64: _imageBase64,
-      category: _selectedCategory,
+      categories: List<String>.from(_selectedCategories),
+      animalType: _selectedAnimalType,
       locationText: loc,
       status: 'Butuh Bantuan',
       createdAt: DateTime.now(),
@@ -138,7 +168,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
           _imageBase64 = '';
           _imageBytes = null;
           _originalImageBytes = null;
-          _selectedCategory = 'Sakit';
+          _selectedCategories = [];
+          _selectedAnimalType = 'Kucing';
         });
         // Show success popup then go to Home
         await showDialog(
@@ -289,14 +320,18 @@ class _AddPostScreenState extends State<AddPostScreen> {
             const SizedBox(height: 8),
             TextField(controller: _descController, maxLines: 4, style: TextStyle(color: isDark ? Colors.white : Colors.black87), decoration: _inputDecoration('Jelaskan kondisi hewan yang ditemukan...', isDark)),
             const SizedBox(height: 20),
+            // --- Kategori (multi-select) ---
             Text('Kategori', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
+            const SizedBox(height: 4),
+            Text('Pilih satu atau lebih kategori', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: _categories.map((cat) {
-                final isSelected = _selectedCategory == cat['label'];
+                final isSelected = _selectedCategories.contains(cat['label']);
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedCategory = cat['label']!),
+                  onTap: () => _toggleCategory(cat['label']!),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -305,7 +340,44 @@ class _AddPostScreenState extends State<AddPostScreen> {
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: isSelected ? const Color(0xFFF2994A) : Colors.grey[300]!),
                     ),
-                    child: Text('${cat['emoji']} ${cat['label']}',
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isSelected) ...[
+                          const Icon(Icons.check, color: Colors.white, size: 16),
+                          const SizedBox(width: 4),
+                        ],
+                        Text('${cat['emoji']} ${cat['label']}',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.white : isDark ? Colors.grey[300] : Colors.black87)),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            // --- Jenis Hewan ---
+            Text('Jenis Hewan', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
+            const SizedBox(height: 4),
+            Text('Pilih jenis hewan', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _animalTypes.map((animal) {
+                final isSelected = _selectedAnimalType == animal['label'];
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedAnimalType = animal['label']!),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF4CAF50) : isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[300]!),
+                    ),
+                    child: Text('${animal['emoji']} ${animal['label']}',
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
                         color: isSelected ? Colors.white : isDark ? Colors.grey[300] : Colors.black87)),
                   ),

@@ -316,7 +316,8 @@ class _DetailScreenState extends State<DetailScreen> {
     final isFull = slotCount >= 3;
     final isCompleted = post.status == 'Berhasil Ditangani';
     final isOwner = post.userId == _currentUserId;
-    final canEditDelete = isOwner || _isAdmin;
+    final canEdit = isOwner; // Only owner can edit
+    final canDelete = isOwner || _isAdmin; // Owner or admin can delete
 
     return CustomScrollView(slivers: [
       SliverToBoxAdapter(
@@ -341,12 +342,14 @@ class _DetailScreenState extends State<DetailScreen> {
               const SizedBox(height: 6),
               Text('oleh ${post.username}  •  ${_timeAgo(post.createdAt)}', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
             ])),
-            if (canEditDelete) ...[
+            if (canEdit) ...[
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditPostScreen(post: post))),
                 child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF2994A).withOpacity(0.1), shape: BoxShape.circle),
                   child: const Icon(Icons.edit, color: Color(0xFFF2994A), size: 18))),
+            ],
+            if (canDelete) ...[
               const SizedBox(width: 6),
               GestureDetector(
                 onTap: () => _deletePost(post),
@@ -359,6 +362,20 @@ class _DetailScreenState extends State<DetailScreen> {
       SliverToBoxAdapter(
         child: Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(post.description, style: TextStyle(fontSize: 14, height: 1.5, color: isDark ? Colors.grey[300] : Colors.grey[700])),
+          const SizedBox(height: 14),
+          // Categories & Animal Type
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            ...post.categories.map((cat) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(color: const Color(0xFFF2994A).withOpacity(0.12), borderRadius: BorderRadius.circular(14)),
+              child: Text(cat, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFF2994A))),
+            )),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(color: const Color(0xFF4CAF50).withOpacity(0.12), borderRadius: BorderRadius.circular(14)),
+              child: Text(post.animalType, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF4CAF50))),
+            ),
+          ]),
           const SizedBox(height: 16),
           // Location
           Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!)),

@@ -5,7 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:paws_care/models/post_model.dart';
 import 'package:paws_care/models/comment_model.dart';
-import 'package:paws_care/models/user_model.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/screens/edit_post_screen.dart';
 
@@ -297,7 +298,7 @@ class _DetailScreenState extends State<DetailScreen> {
                   onTap: () => Navigator.pop(context),
                   child: Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4), shape: BoxShape.circle),
                     child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
                   ),
                 ),
@@ -345,12 +346,12 @@ class _DetailScreenState extends State<DetailScreen> {
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditPostScreen(post: post))),
-                child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF2994A).withOpacity(0.1), shape: BoxShape.circle),
+                child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF2994A).withValues(alpha: 0.1), shape: BoxShape.circle),
                   child: const Icon(Icons.edit, color: Color(0xFFF2994A), size: 18))),
               const SizedBox(width: 6),
               GestureDetector(
                 onTap: () => _deletePost(post),
-                child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), shape: BoxShape.circle),
+                child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), shape: BoxShape.circle),
                   child: const Icon(Icons.delete, color: Colors.red, size: 18))),
             ],
           ],
@@ -360,15 +361,8 @@ class _DetailScreenState extends State<DetailScreen> {
         child: Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(post.description, style: TextStyle(fontSize: 14, height: 1.5, color: isDark ? Colors.grey[300] : Colors.grey[700])),
           const SizedBox(height: 16),
-          // Location
-          Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!)),
-            child: Row(children: [
-              Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFF4CAF50).withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(Icons.location_on, color: Color(0xFF4CAF50), size: 20)),
-              const SizedBox(width: 12),
-              Expanded(child: Text(post.locationText.isNotEmpty ? post.locationText : 'Lokasi belum tersedia',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87))),
-            ])),
+          // Location (Clickable - opens Google Maps)
+          _buildLocationCard(post, isDark),
           const SizedBox(height: 16),
           // Volunteer slots
           Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!)),
@@ -420,8 +414,8 @@ class _DetailScreenState extends State<DetailScreen> {
                 child: const Text('Batal Menangani'))),
             ],
           ] else ...[
-            Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF4CAF50).withOpacity(0.1), borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3))),
+            Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF4CAF50).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF4CAF50).withValues(alpha: 0.3))),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Row(children: [Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 20), SizedBox(width: 8),
                   Text('Berhasil Ditangani', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF4CAF50)))]),
@@ -436,6 +430,124 @@ class _DetailScreenState extends State<DetailScreen> {
         ])),
       ),
     ]);
+  }
+
+  Widget _buildLocationCard(PostModel post, bool isDark) {
+    final hasCoords = post.latitude != 0 && post.longitude != 0;
+    final hasText = post.locationText.isNotEmpty;
+    final canOpenMaps = hasCoords || hasText;
+
+    Future<void> openMaps() async {
+      Uri url;
+      if (hasCoords) {
+        url = Uri.parse(
+            'https://www.google.com/maps/search/?api=1&query=${post.latitude},${post.longitude}');
+      } else {
+        url = Uri.parse(
+            'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(post.locationText)}');
+      }
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    }
+
+    return GestureDetector(
+      onTap: canOpenMaps ? openMaps : null,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: canOpenMaps
+                  ? const Color(0xFF4CAF50).withValues(alpha: 0.4)
+                  : isDark
+                      ? Colors.grey[800]!
+                      : Colors.grey[200]!),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.location_on,
+                      color: Color(0xFF4CAF50), size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasText ? post.locationText : (hasCoords ? 'Lokasi GPS tersedia' : 'Lokasi belum tersedia'),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      if (hasCoords) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          '📍 ${post.latitude.toStringAsFixed(6)}, ${post.longitude.toStringAsFixed(6)}',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (canOpenMaps)
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.open_in_new,
+                        color: Color(0xFF4CAF50), size: 16),
+                  ),
+              ],
+            ),
+            if (canOpenMaps) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4CAF50).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.map, size: 16, color: Color(0xFF4CAF50)),
+                    const SizedBox(width: 6),
+                    Text(
+                      hasCoords
+                          ? 'Buka di Google Maps (GPS)'
+                          : 'Buka di Google Maps (Alamat)',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF4CAF50),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildCommentsSection(bool isDark) {

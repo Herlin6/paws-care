@@ -49,9 +49,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         String msg = 'Registrasi gagal';
-        if (e.code == 'email-already-in-use') msg = 'Email sudah terdaftar';
-        else if (e.code == 'weak-password') msg = 'Password terlalu lemah';
-        else if (e.code == 'invalid-email') msg = 'Format email tidak valid';
+        if (e.code == 'email-already-in-use') {
+          msg = 'Email sudah terdaftar';
+        } else if (e.code == 'weak-password') {
+          msg = 'Password terlalu lemah';
+        } else if (e.code == 'invalid-email') {
+          msg = 'Format email tidak valid';
+        }
         _showSnack(msg);
       }
     } catch (e) {
@@ -107,7 +111,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.3 : 0.06), blurRadius: 20, offset: const Offset(0, 4))]),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06), blurRadius: 20, offset: const Offset(0, 4))]),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Nama', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
                   const SizedBox(height: 8),
@@ -128,7 +132,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF2994A), foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFFF2994A).withOpacity(0.6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                        disabledBackgroundColor: const Color(0xFFF2994A).withValues(alpha: 0.6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                       child: _isLoading
                         ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Text('Daftar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)))),

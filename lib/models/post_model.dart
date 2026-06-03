@@ -9,6 +9,8 @@ class PostModel {
   final String imageBase64;
   final String category;
   final String locationText;
+  final double latitude;
+  final double longitude;
   final String status;
   final DateTime createdAt;
   final List<String> favoriteBy;
@@ -25,6 +27,8 @@ class PostModel {
     required this.description,
     this.imageBase64 = '',
     required this.category,
+    this.latitude = 0.0,
+    this.longitude = 0.0,
     this.locationText = '',
     this.status = 'Butuh Bantuan',
     required this.createdAt,
@@ -45,6 +49,8 @@ class PostModel {
       'imageBase64': imageBase64,
       'category': category,
       'locationText': locationText,
+      'latitude': latitude,
+      'longitude': longitude,
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
       'favoriteBy': favoriteBy,
@@ -65,6 +71,8 @@ class PostModel {
       imageBase64: map['imageBase64'] ?? '',
       category: map['category'] ?? '',
       locationText: map['locationText'] ?? '',
+      latitude: (map['latitude'] ?? 0).toDouble(),
+      longitude: (map['longitude'] ?? 0).toDouble(),
       status: map['status'] ?? 'Butuh Bantuan',
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
@@ -86,6 +94,8 @@ class PostModel {
     String? imageBase64,
     String? category,
     String? locationText,
+    double? latitude,
+    double? longitude,
     String? status,
     DateTime? createdAt,
     List<String>? favoriteBy,
@@ -103,11 +113,14 @@ class PostModel {
       imageBase64: imageBase64 ?? this.imageBase64,
       category: category ?? this.category,
       locationText: locationText ?? this.locationText,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       favoriteBy: favoriteBy ?? this.favoriteBy,
       handledBy: handledBy ?? this.handledBy,
-      completionProofBase64: completionProofBase64 ?? this.completionProofBase64,
+      completionProofBase64:
+          completionProofBase64 ?? this.completionProofBase64,
       completionNote: completionNote ?? this.completionNote,
       completedByUid: completedByUid ?? this.completedByUid,
     );

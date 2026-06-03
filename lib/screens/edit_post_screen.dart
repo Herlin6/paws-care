@@ -63,6 +63,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
     if (picked != null && mounted) {
       final bytes = await picked.readAsBytes();
       _originalImageBytes = bytes;
+      if (!mounted) return;
       final croppedBytes = await Navigator.push<Uint8List>(
         context,
         MaterialPageRoute(builder: (_) => ImageCropScreen(imageBytes: bytes)),
@@ -118,7 +119,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4CAF50).withOpacity(0.1),
+                    color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 56),
@@ -196,7 +197,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
                               onTap: _pickImage,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(8)),
+                                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(8)),
                                 child: const Row(mainAxisSize: MainAxisSize.min, children: [
                                   Icon(Icons.photo_library, color: Colors.white, size: 14),
                                   SizedBox(width: 4),
@@ -209,7 +210,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
                             bottom: 8, right: 8,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(8)),
+                              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(8)),
                               child: const Row(mainAxisSize: MainAxisSize.min, children: [
                                 Icon(Icons.crop, color: Colors.white, size: 14),
                                 SizedBox(width: 4),

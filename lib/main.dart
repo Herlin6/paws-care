@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:paws_care/screens/splash_screen.dart';
 import 'package:paws_care/services/auth_service.dart';
+import 'package:paws_care/services/notification_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Global theme notifier for dark mode toggle
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
@@ -16,6 +18,14 @@ void main() async {
   // Pastikan akun Admin ada
   final authService = AuthService();
   await authService.ensureAdminExists();
+
+  // Inisialisasi dan request permission Notifikasi
+  final notifService = NotificationService();
+  await notifService.init();
+  
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
 
   runApp(const MainApp());
 }

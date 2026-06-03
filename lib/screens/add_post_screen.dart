@@ -8,6 +8,9 @@ import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/services/auth_service.dart';
 import 'package:paws_care/widgets/main_scaffold.dart';
 import 'package:paws_care/screens/image_crop_screen.dart';
+import 'package:geolocator/geolocator.dart';
+
+enum _GpsStatus { loading, success, failed, disabled }
 
 class AddPostScreen extends StatefulWidget {
   const AddPostScreen({super.key});
@@ -17,6 +20,7 @@ class AddPostScreen extends StatefulWidget {
 }
 
 class _AddPostScreenState extends State<AddPostScreen> {
+
   final FirestoreService _service = FirestoreService();
   final AuthService _authService = AuthService();
   final TextEditingController _titleController = TextEditingController();
@@ -27,10 +31,15 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
   String _selectedCategory = 'Sakit';
   String _imageBase64 = '';
+  double? _latitude;
+  double? _longitude;
   Uint8List? _imageBytes;
   Uint8List? _originalImageBytes;
   bool _isLoading = false;
   String _currentUsername = '';
+  bool _useGps = true; // true = GPS otomatis, false = manual
+  _GpsStatus _gpsStatus = _GpsStatus.loading;
+  String _gpsErrorMessage = '';
 
   final List<Map<String, String>> _categories = [
     {'label': 'Sakit', 'emoji': '🩹'},
@@ -43,6 +52,68 @@ class _AddPostScreenState extends State<AddPostScreen> {
   void initState() {
     super.initState();
     _loadUsername();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _gpsStatus = _GpsStatus.loading;
+      _gpsErrorMessage = '';
+    });
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          setState(() {
+            _gpsStatus = _GpsStatus.disabled;
+            _gpsErrorMessage = 'Layanan lokasi tidak aktif';
+          });
+        }
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        if (mounted) {
+          setState(() {
+            _gpsStatus = _GpsStatus.failed;
+            _gpsErrorMessage = 'Izin lokasi ditolak';
+          });
+        }
+        return;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() {
+            _gpsStatus = _GpsStatus.failed;
+            _gpsErrorMessage = 'Izin lokasi ditolak permanen';
+          });
+        }
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition();
+      if (mounted) {
+        setState(() {
+          _latitude = position.latitude;
+          _longitude = position.longitude;
+          _gpsStatus = _GpsStatus.success;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _gpsStatus = _GpsStatus.failed;
+          _gpsErrorMessage = 'Gagal mendapatkan lokasi';
+        });
+      }
+    }
   }
 
   Future<void> _loadUsername() async {
@@ -71,6 +142,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     if (picked != null && mounted) {
       final bytes = await picked.readAsBytes();
       _originalImageBytes = bytes;
+      if (!mounted) return;
       // Navigate to crop screen
       final croppedBytes = await Navigator.push<Uint8List>(
         context,
@@ -89,7 +161,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
     if (_originalImageBytes == null) return;
     final croppedBytes = await Navigator.push<Uint8List>(
       context,
-      MaterialPageRoute(builder: (_) => ImageCropScreen(imageBytes: _originalImageBytes!)),
+      MaterialPageRoute(
+          builder: (_) => ImageCropScreen(imageBytes: _originalImageBytes!)),
     );
     if (croppedBytes != null && mounted) {
       setState(() {
@@ -111,6 +184,20 @@ class _AddPostScreenState extends State<AddPostScreen> {
       return;
     }
 
+    // Validate location: at least one method should have data
+    final hasGps = _useGps && _latitude != null && _longitude != null;
+    final hasManualLoc = !_useGps && loc.isNotEmpty;
+    if (!hasGps && !hasManualLoc) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_useGps
+              ? 'Lokasi GPS belum tersedia. Coba lagi atau gunakan lokasi manual.'
+              : 'Masukkan alamat lokasi manual terlebih dahulu.'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     final post = PostModel(
@@ -122,6 +209,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
       imageBase64: _imageBase64,
       category: _selectedCategory,
       locationText: loc,
+      latitude: _useGps ? (_latitude ?? 0.0) : 0.0,
+      longitude: _useGps ? (_longitude ?? 0.0) : 0.0,
       status: 'Butuh Bantuan',
       createdAt: DateTime.now(),
       favoriteBy: [],
@@ -139,28 +228,39 @@ class _AddPostScreenState extends State<AddPostScreen> {
           _imageBytes = null;
           _originalImageBytes = null;
           _selectedCategory = 'Sakit';
+          _latitude = null;
+          _longitude = null;
+          _useGps = true;
+          _gpsStatus = _GpsStatus.loading;
         });
+        // Re-fetch GPS for next report
+        _getCurrentLocation();
         // Show success popup then go to Home
         await showDialog(
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4CAF50).withOpacity(0.1),
+                    color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 56),
+                  child: const Icon(Icons.check_circle,
+                      color: Color(0xFF4CAF50), size: 56),
                 ),
                 const SizedBox(height: 16),
-                const Text('Berhasil! 🐾', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text('Berhasil! 🐾',
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('Laporan berhasil dikirim.', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                Text('Laporan berhasil dikirim.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600])),
               ],
             ),
             actions: [
@@ -171,7 +271,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF4CAF50),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   child: const Text('OK'),
                 ),
@@ -197,9 +298,11 @@ class _AddPostScreenState extends State<AddPostScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFFFF8E7),
+      backgroundColor:
+          isDark ? const Color(0xFF121212) : const Color(0xFFFFF8E7),
       appBar: AppBar(
-        title: const Text('Laporan Baru', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Laporan Baru',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         foregroundColor: isDark ? Colors.white : Colors.black87,
         elevation: 0.5,
@@ -210,7 +313,11 @@ class _AddPostScreenState extends State<AddPostScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Foto Hewan', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
+            Text('Foto Hewan',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black87)),
             const SizedBox(height: 8),
             GestureDetector(
               onTap: _imageBytes != null ? _reCropImage : _pickImage,
@@ -218,52 +325,68 @@ class _AddPostScreenState extends State<AddPostScreen> {
                 height: 200,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFFFF8E7),
+                  color: isDark
+                      ? const Color(0xFF2C2C2C)
+                      : const Color(0xFFFFF8E7),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFF6D58A), width: 1.5),
+                  border:
+                      Border.all(color: const Color(0xFFF6D58A), width: 1.5),
                 ),
                 child: _imageBytes != null
                     ? Stack(
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(14),
-                            child: Image.memory(_imageBytes!, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
+                            child: Image.memory(_imageBytes!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity),
                           ),
                           Positioned(
-                            bottom: 8, left: 8,
+                            bottom: 8,
+                            left: 8,
                             child: GestureDetector(
                               onTap: _pickImage,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.6),
+                                  color: Colors.black.withValues(alpha: 0.6),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.photo_library, color: Colors.white, size: 14),
+                                    Icon(Icons.photo_library,
+                                        color: Colors.white, size: 14),
                                     SizedBox(width: 4),
-                                    Text('Ganti foto', style: TextStyle(color: Colors.white, fontSize: 11)),
+                                    Text('Ganti foto',
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 11)),
                                   ],
                                 ),
                               ),
                             ),
                           ),
                           Positioned(
-                            bottom: 8, right: 8,
+                            bottom: 8,
+                            right: 8,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
+                                color: Colors.black.withValues(alpha: 0.6),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.crop, color: Colors.white, size: 14),
+                                  Icon(Icons.crop,
+                                      color: Colors.white, size: 14),
                                   SizedBox(width: 4),
-                                  Text('Crop ulang', style: TextStyle(color: Colors.white, fontSize: 11)),
+                                  Text('Crop ulang',
+                                      style: TextStyle(
+                                          color: Colors.white, fontSize: 11)),
                                 ],
                               ),
                             ),
@@ -273,59 +396,108 @@ class _AddPostScreenState extends State<AddPostScreen> {
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.camera_alt_outlined, size: 48, color: Colors.grey[400]),
+                          Icon(Icons.camera_alt_outlined,
+                              size: 48, color: Colors.grey[400]),
                           const SizedBox(height: 8),
-                          Text('Tap untuk upload foto', style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+                          Text('Tap untuk upload foto',
+                              style: TextStyle(
+                                  color: Colors.grey[400], fontSize: 13)),
                         ],
                       ),
               ),
             ),
             const SizedBox(height: 20),
-            Text('Judul', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
+            Text('Judul',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black87)),
             const SizedBox(height: 8),
-            TextField(controller: _titleController, style: TextStyle(color: isDark ? Colors.white : Colors.black87), decoration: _inputDecoration('Judul singkat laporan...', isDark)),
+            TextField(
+                controller: _titleController,
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                decoration:
+                    _inputDecoration('Judul singkat laporan...', isDark)),
             const SizedBox(height: 20),
-            Text('Deskripsi', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
+            Text('Deskripsi',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black87)),
             const SizedBox(height: 8),
-            TextField(controller: _descController, maxLines: 4, style: TextStyle(color: isDark ? Colors.white : Colors.black87), decoration: _inputDecoration('Jelaskan kondisi hewan yang ditemukan...', isDark)),
+            TextField(
+                controller: _descController,
+                maxLines: 4,
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                decoration: _inputDecoration(
+                    'Jelaskan kondisi hewan yang ditemukan...', isDark)),
             const SizedBox(height: 20),
-            Text('Kategori', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
+            Text('Kategori',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black87)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: _categories.map((cat) {
                 final isSelected = _selectedCategory == cat['label'];
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedCategory = cat['label']!),
+                  onTap: () =>
+                      setState(() => _selectedCategory = cat['label']!),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFF2994A) : isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                      color: isSelected
+                          ? const Color(0xFFF2994A)
+                          : isDark
+                              ? const Color(0xFF2C2C2C)
+                              : Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: isSelected ? const Color(0xFFF2994A) : Colors.grey[300]!),
+                      border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFFF2994A)
+                              : Colors.grey[300]!),
                     ),
                     child: Text('${cat['emoji']} ${cat['label']}',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.white : isDark ? Colors.grey[300] : Colors.black87)),
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? Colors.white
+                                : isDark
+                                    ? Colors.grey[300]
+                                    : Colors.black87)),
                   ),
                 );
               }).toList(),
             ),
             const SizedBox(height: 20),
-            Text('Lokasi', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
-            const SizedBox(height: 8),
-            TextField(controller: _locationController, style: TextStyle(color: isDark ? Colors.white : Colors.black87), decoration: _inputDecoration('Masukkan alamat lokasi...', isDark)),
+            // ===== LOCATION SECTION =====
+            _buildLocationSection(isDark),
             const SizedBox(height: 28),
             SizedBox(
-              width: double.infinity, height: 50,
+              width: double.infinity,
+              height: 50,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _submit,
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF2994A), foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 2),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF2994A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    elevation: 2),
                 child: _isLoading
-                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Kirim Laporan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Text('Kirim Laporan',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(height: 24),
@@ -335,13 +507,326 @@ class _AddPostScreenState extends State<AddPostScreen> {
     );
   }
 
+  Widget _buildLocationSection(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.location_on, size: 18, color: isDark ? Colors.white : Colors.black87),
+            const SizedBox(width: 6),
+            Text('Lokasi',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black87)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // Location method toggle
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _useGps = true),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: _useGps
+                          ? const Color(0xFF4CAF50)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.gps_fixed,
+                            size: 16,
+                            color: _useGps
+                                ? Colors.white
+                                : isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600]),
+                        const SizedBox(width: 6),
+                        Text('GPS Otomatis',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _useGps
+                                    ? Colors.white
+                                    : isDark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600])),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _useGps = false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: !_useGps
+                          ? const Color(0xFFF2994A)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.edit_location_alt,
+                            size: 16,
+                            color: !_useGps
+                                ? Colors.white
+                                : isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600]),
+                        const SizedBox(width: 6),
+                        Text('Lokasi Manual',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: !_useGps
+                                    ? Colors.white
+                                    : isDark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600])),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // GPS status or Manual input
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: _useGps ? _buildGpsStatus(isDark) : _buildManualInput(isDark),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGpsStatus(bool isDark) {
+    IconData icon;
+    Color iconColor;
+    String statusText;
+    String? subtitleText;
+    Widget? trailing;
+
+    switch (_gpsStatus) {
+      case _GpsStatus.loading:
+        icon = Icons.gps_fixed;
+        iconColor = const Color(0xFFF2994A);
+        statusText = 'Mencari lokasi GPS...';
+        subtitleText = 'Pastikan GPS perangkat Anda aktif';
+        trailing = const SizedBox(
+          width: 18, height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF2994A)),
+        );
+        break;
+      case _GpsStatus.success:
+        icon = Icons.check_circle;
+        iconColor = const Color(0xFF4CAF50);
+        statusText = 'Lokasi GPS berhasil ditemukan';
+        subtitleText = '${_latitude!.toStringAsFixed(6)}, ${_longitude!.toStringAsFixed(6)}';
+        trailing = null;
+        break;
+      case _GpsStatus.failed:
+        icon = Icons.error_outline;
+        iconColor = const Color(0xFFE53935);
+        statusText = _gpsErrorMessage;
+        subtitleText = 'Tap untuk coba lagi atau gunakan lokasi manual';
+        trailing = GestureDetector(
+          onTap: _getCurrentLocation,
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2994A).withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.refresh, size: 18, color: Color(0xFFF2994A)),
+          ),
+        );
+        break;
+      case _GpsStatus.disabled:
+        icon = Icons.location_disabled;
+        iconColor = Colors.grey;
+        statusText = _gpsErrorMessage;
+        subtitleText = 'Aktifkan GPS di pengaturan perangkat';
+        trailing = GestureDetector(
+          onTap: _getCurrentLocation,
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2994A).withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.refresh, size: 18, color: Color(0xFFF2994A)),
+          ),
+        );
+        break;
+    }
+
+    final statusCard = Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _gpsStatus == _GpsStatus.success
+              ? const Color(0xFF4CAF50).withValues(alpha: 0.5)
+              : _gpsStatus == _GpsStatus.failed
+                  ? const Color(0xFFE53935).withValues(alpha: 0.3)
+                  : isDark
+                      ? Colors.grey[700]!
+                      : Colors.grey[300]!,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(statusText,
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87)),
+                const SizedBox(height: 2),
+                Text(subtitleText,
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+              ],
+            ),
+          ),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+
+    // Wrap in a Column to add optional location text field
+    return Column(
+      key: const ValueKey('gps'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        statusCard,
+        if (_gpsStatus == _GpsStatus.success) ...[
+          const SizedBox(height: 10),
+          TextField(
+            controller: _locationController,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            decoration: InputDecoration(
+              hintText: 'Nama lokasi (opsional, mis: "Depan Indomaret Jl. Merdeka")',
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
+              prefixIcon: Icon(Icons.edit_note, color: Colors.grey[400], size: 20),
+              filled: true,
+              fillColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!)),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!)),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      const BorderSide(color: Color(0xFFF2994A), width: 1.5)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              isDense: true,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildManualInput(bool isDark) {
+    return Column(
+      key: const ValueKey('manual'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+            controller: _locationController,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            decoration: InputDecoration(
+              hintText: 'Ketik alamat atau nama lokasi...',
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+              prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 20),
+              filled: true,
+              fillColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!)),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!)),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      const BorderSide(color: Color(0xFFF2994A), width: 1.5)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            )),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Icon(Icons.info_outline, size: 14, color: Colors.grey[400]),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Masukkan alamat lengkap agar relawan mudah menemukan lokasi.',
+                style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   InputDecoration _inputDecoration(String hint, bool isDark) {
     return InputDecoration(
-      hintText: hint, hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-      filled: true, fillColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFF2994A), width: 1.5)),
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+      filled: true,
+      fillColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+              color: isDark ? Colors.grey[700]! : Colors.grey[300]!)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFF2994A), width: 1.5)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
   }

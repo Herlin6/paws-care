@@ -6,6 +6,7 @@ import 'package:paws_care/services/auth_service.dart';
 import 'package:paws_care/widgets/post_card.dart';
 import 'package:paws_care/widgets/category_chip.dart';
 import 'package:paws_care/screens/detail_screen.dart';
+import 'package:paws_care/screens/map_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -121,14 +122,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.black.withAlpha(15), blurRadius: 8, offset: const Offset(0, 2))],
+              GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MapScreen())),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: Colors.black.withAlpha(15), blurRadius: 8, offset: const Offset(0, 2))],
+                  ),
+                  child: const Icon(Icons.map_rounded, color: Color(0xFFF2994A), size: 22),
                 ),
-                child: const Icon(Icons.pets_rounded, color: Color(0xFFF2994A), size: 22),
               ),
             ],
           ),

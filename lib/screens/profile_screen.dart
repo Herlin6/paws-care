@@ -79,7 +79,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2994A).withOpacity(0.1),
+                  color: const Color(0xFFF2994A).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.photo_library_outlined, color: Color(0xFFF2994A)),
@@ -99,7 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.delete_outline, color: Colors.red),
@@ -163,6 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (picked != null && mounted) {
       final bytes = await picked.readAsBytes();
       // Navigate to crop screen with square 1:1 ratio
+      if (!mounted) return;
       final croppedBytes = await Navigator.push<Uint8List>(
         context,
         MaterialPageRoute(builder: (_) => ImageCropScreen(imageBytes: bytes, aspectRatio: 1.0)),
@@ -319,13 +320,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 try {
                   Navigator.pop(ctx);
                   await _authService.updatePassword(newPass);
-                  if (mounted) {
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Password berhasil diubah! ✅'), backgroundColor: Color(0xFF4CAF50)),
                     );
                   }
                 } catch (e) {
-                  if (mounted) {
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal ubah password: $e'), backgroundColor: Colors.red));
                   }
                 }
@@ -380,10 +381,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFFFF8E7),
       appBar: AppBar(
-        title: Row(children: [
-          const Icon(Icons.person, color: Color(0xFFF2994A), size: 22),
-          const SizedBox(width: 8),
-          const Text('Profil', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Row(children: [
+          Icon(Icons.person, color: Color(0xFFF2994A), size: 22),
+          SizedBox(width: 8),
+          Text('Profil', style: TextStyle(fontWeight: FontWeight.bold)),
         ]),
         backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         foregroundColor: isDark ? Colors.white : Colors.black87,
@@ -401,7 +402,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Stack(children: [
                     CircleAvatar(
                       radius: 48,
-                      backgroundColor: const Color(0xFFF6D58A).withOpacity(0.5),
+                      backgroundColor: const Color(0xFFF6D58A).withValues(alpha: 0.5),
                       backgroundImage: _user?.photoBase64.isNotEmpty == true
                           ? MemoryImage(base64Decode(_user!.photoBase64))
                           : null,
@@ -429,7 +430,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _user?.isAdmin == true ? const Color(0xFFE53935).withOpacity(0.1) : const Color(0xFFF2994A).withOpacity(0.1),
+                    color: _user?.isAdmin == true ? const Color(0xFFE53935).withValues(alpha: 0.1) : const Color(0xFFF2994A).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -469,7 +470,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.05), blurRadius: 8, offset: const Offset(0, 2))]),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05), blurRadius: 8, offset: const Offset(0, 2))]),
       child: Column(children: [
         Icon(icon, color: color, size: 28), const SizedBox(height: 8),
         Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
@@ -485,7 +486,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.04), blurRadius: 6, offset: const Offset(0, 2))]),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04), blurRadius: 6, offset: const Offset(0, 2))]),
         child: Row(children: [
           Icon(icon, color: isLogout ? Colors.red : Colors.grey[600], size: 22), const SizedBox(width: 14),
           Expanded(child: Text(label, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: isLogout ? Colors.red : isDark ? Colors.white : Colors.black87))),
@@ -499,11 +500,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.04), blurRadius: 6, offset: const Offset(0, 2))]),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04), blurRadius: 6, offset: const Offset(0, 2))]),
       child: Row(children: [
         Icon(Icons.dark_mode_outlined, color: Colors.grey[600], size: 22), const SizedBox(width: 14),
         Expanded(child: Text('Dark Mode', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: isDark ? Colors.white : Colors.black87))),
-        Switch(value: isDark, onChanged: (_) => themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark, activeColor: const Color(0xFFF2994A)),
+        Switch(value: isDark, onChanged: (_) => themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark, activeTrackColor: const Color(0xFFF2994A)),
       ]),
     );
   }

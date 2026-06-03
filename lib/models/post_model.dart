@@ -9,6 +9,7 @@ class PostModel {
   final String imageBase64;
   final String category;
   final String locationText;
+  final String locationDetail;
   final double latitude;
   final double longitude;
   final String status;
@@ -30,6 +31,7 @@ class PostModel {
     this.latitude = 0.0,
     this.longitude = 0.0,
     this.locationText = '',
+    this.locationDetail = '',
     this.status = 'Butuh Bantuan',
     required this.createdAt,
     this.favoriteBy = const [],
@@ -49,6 +51,7 @@ class PostModel {
       'imageBase64': imageBase64,
       'category': category,
       'locationText': locationText,
+      'locationDetail': locationDetail,
       'latitude': latitude,
       'longitude': longitude,
       'status': status,
@@ -71,6 +74,7 @@ class PostModel {
       imageBase64: map['imageBase64'] ?? '',
       category: map['category'] ?? '',
       locationText: map['locationText'] ?? '',
+      locationDetail: map['locationDetail'] ?? '',
       latitude: (map['latitude'] ?? 0).toDouble(),
       longitude: (map['longitude'] ?? 0).toDouble(),
       status: map['status'] ?? 'Butuh Bantuan',
@@ -94,6 +98,7 @@ class PostModel {
     String? imageBase64,
     String? category,
     String? locationText,
+    String? locationDetail,
     double? latitude,
     double? longitude,
     String? status,
@@ -113,6 +118,7 @@ class PostModel {
       imageBase64: imageBase64 ?? this.imageBase64,
       category: category ?? this.category,
       locationText: locationText ?? this.locationText,
+      locationDetail: locationDetail ?? this.locationDetail,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       status: status ?? this.status,

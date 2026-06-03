@@ -26,6 +26,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _locationDetailController = TextEditingController();
 
   String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -128,6 +129,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     _titleController.dispose();
     _descController.dispose();
     _locationController.dispose();
+    _locationDetailController.dispose();
     super.dispose();
   }
 
@@ -176,6 +178,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     final title = _titleController.text.trim();
     final desc = _descController.text.trim();
     final loc = _locationController.text.trim();
+    final locDetail = _locationDetailController.text.trim();
 
     if (title.isEmpty || desc.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -209,6 +212,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
       imageBase64: _imageBase64,
       category: _selectedCategory,
       locationText: loc,
+      locationDetail: locDetail,
       latitude: _useGps ? (_latitude ?? 0.0) : 0.0,
       longitude: _useGps ? (_longitude ?? 0.0) : 0.0,
       status: 'Butuh Bantuan',
@@ -223,6 +227,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
         _titleController.clear();
         _descController.clear();
         _locationController.clear();
+        _locationDetailController.clear();
         setState(() {
           _imageBase64 = '';
           _imageBytes = null;
@@ -737,7 +742,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
         if (_gpsStatus == _GpsStatus.success) ...[
           const SizedBox(height: 10),
           TextField(
-            controller: _locationController,
+            controller: _locationDetailController,
             style: TextStyle(color: isDark ? Colors.white : Colors.black87),
             decoration: InputDecoration(
               hintText: 'Nama lokasi (opsional, mis: "Depan Indomaret Jl. Merdeka")',
@@ -775,9 +780,33 @@ class _AddPostScreenState extends State<AddPostScreen> {
             controller: _locationController,
             style: TextStyle(color: isDark ? Colors.white : Colors.black87),
             decoration: InputDecoration(
-              hintText: 'Ketik alamat atau nama lokasi...',
+              hintText: 'Ketik alamat lokasi utama...',
               hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
               prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 20),
+              filled: true,
+              fillColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!)),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!)),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      const BorderSide(color: Color(0xFFF2994A), width: 1.5)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            )),
+        const SizedBox(height: 12),
+        TextField(
+            controller: _locationDetailController,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            decoration: InputDecoration(
+              hintText: 'Detail Lokasi (opsional, mis: Depan Indomaret)',
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+              prefixIcon: Icon(Icons.edit_note, color: Colors.grey[400], size: 20),
               filled: true,
               fillColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
               border: OutlineInputBorder(

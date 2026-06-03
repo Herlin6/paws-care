@@ -492,8 +492,28 @@ class _DetailScreenState extends State<DetailScreen> {
                           color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
+                      if (post.locationDetail.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.subdirectory_arrow_right, size: 12, color: Colors.grey[500]),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                post.locationDetail,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.grey[300] : Colors.grey[700],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       if (hasCoords) ...[
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
                           '📍 ${post.latitude.toStringAsFixed(6)}, ${post.longitude.toStringAsFixed(6)}',
                           style: TextStyle(

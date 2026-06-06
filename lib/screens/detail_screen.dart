@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:paws_care/models/post_model.dart';
 import 'package:paws_care/models/comment_model.dart';
-import 'package:paws_care/models/user_model.dart';
+
 import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/screens/edit_post_screen.dart';
 
@@ -58,10 +58,52 @@ class _DetailScreenState extends State<DetailScreen> {
 
   Color _statusColor(String status) {
     switch (status) {
-      case 'Butuh Bantuan': return const Color(0xFFE53935);
-      case 'Sedang Ditangani': return const Color(0xFFF2994A);
-      case 'Berhasil Ditangani': return const Color(0xFF4CAF50);
-      default: return Colors.grey;
+      case 'Butuh Bantuan':
+        return const Color(0xFFE53935);
+      case 'Sedang Ditangani':
+        return const Color(0xFFF2994A);
+      case 'Berhasil Ditangani':
+        return const Color(0xFF4CAF50);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _categoryEmoji(String cat) {
+    switch (cat) {
+      case 'Hilang':
+        return '🔍';
+      case 'Ditemukan':
+        return '📦';
+      case 'Kecelakaan':
+        return '🚗';
+      case 'Mati':
+        return '💀';
+      case 'Terjebak':
+        return '🪤';
+      case 'Sakit':
+        return '🩹';
+      case 'Lainnya':
+        return '🐾';
+      default:
+        return '🐾';
+    }
+  }
+
+  String _animalEmoji(String type) {
+    switch (type) {
+      case 'Kucing':
+        return '🐱';
+      case 'Anjing':
+        return '🐶';
+      case 'Burung':
+        return '🐦';
+      case 'Kelinci':
+        return '🐰';
+      case 'Reptil':
+        return '🦎';
+      default:
+        return '🐾';
     }
   }
 
@@ -76,18 +118,21 @@ class _DetailScreenState extends State<DetailScreen> {
             ? 'Apakah Anda yakin ingin membatalkan penanganan?'
             : 'Apakah Anda yakin ingin menjadi relawan untuk menangani hewan ini?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tidak')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Tidak')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: isJoined ? Colors.red : const Color(0xFF4CAF50),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () async {
               Navigator.pop(ctx);
               if (isJoined) {
                 await _service.cancelVolunteer(widget.postId, _currentUserId);
               } else {
-                final success = await _service.joinVolunteer(widget.postId, _currentUserId);
+                final success =
+                    await _service.joinVolunteer(widget.postId, _currentUserId);
                 if (!success && mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Slot relawan sudah penuh!')),
@@ -95,7 +140,8 @@ class _DetailScreenState extends State<DetailScreen> {
                 }
               }
             },
-            child: Text(isJoined ? 'Ya, Batalkan' : 'Ya, Saya Bersedia', style: const TextStyle(color: Colors.white)),
+            child: Text(isJoined ? 'Ya, Batalkan' : 'Ya, Saya Bersedia',
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -114,11 +160,14 @@ class _DetailScreenState extends State<DetailScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
             return Container(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -128,21 +177,38 @@ class _DetailScreenState extends State<DetailScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Upload Bukti Penyelesaian', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        GestureDetector(onTap: () => Navigator.pop(ctx), child: const Icon(Icons.close, color: Colors.grey)),
+                        Text('Upload Bukti Penyelesaian',
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black87)),
+                        GestureDetector(
+                            onTap: () => Navigator.pop(ctx),
+                            child: Icon(Icons.close,
+                                color:
+                                    isDark ? Colors.grey[400] : Colors.grey)),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Upload foto sebagai bukti bahwa kasus ini sudah selesai ditangani.',
-                          style: TextStyle(fontSize: 13, color: Color(0xFF666666))),
+                      child: Text(
+                          'Upload foto sebagai bukti bahwa kasus ini sudah selesai ditangani.',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: isDark
+                                  ? Colors.grey[300]
+                                  : const Color(0xFF333333))),
                     ),
                     const SizedBox(height: 16),
                     GestureDetector(
                       onTap: () async {
                         final picker = ImagePicker();
-                        final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 600, maxHeight: 450, imageQuality: 35);
+                        final picked = await picker.pickImage(
+                            source: ImageSource.gallery,
+                            maxWidth: 600,
+                            maxHeight: 450,
+                            imageQuality: 35);
                         if (picked != null) {
                           final bytes = await picked.readAsBytes();
                           setModalState(() {
@@ -152,53 +218,98 @@ class _DetailScreenState extends State<DetailScreen> {
                         }
                       },
                       child: Container(
-                        height: 180, width: double.infinity,
+                        height: 180,
+                        width: double.infinity,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF9F9F6),
+                          color: isDark
+                              ? const Color(0xFF2C2C2C)
+                              : const Color(0xFFF9F9F6),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFD5D5C8), width: 1.5),
+                          border: Border.all(
+                              color: isDark
+                                  ? Colors.grey[700]!
+                                  : const Color(0xFFD5D5C8),
+                              width: 1.5),
                         ),
                         child: proofBytes != null
-                            ? ClipRRect(borderRadius: BorderRadius.circular(14),
-                                child: Image.memory(proofBytes!, fit: BoxFit.cover, width: double.infinity))
-                            : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                                Icon(Icons.camera_alt_outlined, size: 40, color: Colors.grey[400]),
-                                const SizedBox(height: 8),
-                                Text('Tap untuk upload foto bukti', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
-                              ]),
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Image.memory(proofBytes!,
+                                    fit: BoxFit.cover, width: double.infinity))
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                    Icon(Icons.camera_alt_outlined,
+                                        size: 40, color: Colors.grey[400]),
+                                    const SizedBox(height: 8),
+                                    Text('Tap untuk upload foto bukti',
+                                        style: TextStyle(
+                                            color: Colors.grey[500],
+                                            fontSize: 13)),
+                                  ]),
                       ),
                     ),
                     const SizedBox(height: 14),
                     TextField(
                       controller: noteController,
+                      style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87),
                       decoration: InputDecoration(
                         hintText: 'Tambahkan keterangan (opsional)...',
-                        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF4CAF50))),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        hintStyle:
+                            TextStyle(color: Colors.grey[400], fontSize: 14),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!)),
+                        enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                                color: isDark
+                                    ? Colors.grey[700]!
+                                    : Colors.grey[300]!)),
+                        focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: Color(0xFF4CAF50))),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
                       ),
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
-                      width: double.infinity, height: 48,
+                      width: double.infinity,
+                      height: 48,
                       child: ElevatedButton.icon(
                         onPressed: () async {
                           if (proofBase64.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload foto bukti terlebih dahulu!')));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Upload foto bukti terlebih dahulu!')));
                             return;
                           }
-                          await _service.markCompleted(postId: widget.postId, uid: _currentUserId, proofBase64: proofBase64, note: noteController.text.trim());
+                          await _service.markCompleted(
+                              postId: widget.postId,
+                              uid: _currentUserId,
+                              proofBase64: proofBase64,
+                              note: noteController.text.trim());
                           if (context.mounted) {
                             Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kasus ditandai selesai! ✅'), backgroundColor: Color(0xFF4CAF50)));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Kasus ditandai selesai! ✅'),
+                                    backgroundColor: Color(0xFF4CAF50)));
                           }
                         },
                         icon: const Icon(Icons.check_circle_outline, size: 20),
-                        label: const Text('Tandai Selesai', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4CAF50), foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                        label: const Text('Tandai Selesai',
+                            style: TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4CAF50),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14))),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -220,16 +331,22 @@ class _DetailScreenState extends State<DetailScreen> {
         title: const Text('Hapus Komentar?'),
         content: const Text('Apakah Anda yakin ingin menghapus komentar ini?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
               await _service.deleteComment(comment.commentId);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Komentar dihapus'), backgroundColor: Colors.red));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Komentar dihapus'),
+                    backgroundColor: Colors.red));
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8))),
             child: const Text('Hapus', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -243,21 +360,39 @@ class _DetailScreenState extends State<DetailScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Hapus Laporan?'),
-        content: const Text('Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak bisa dibatalkan.'),
+        content: const Text(
+            'Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak bisa dibatalkan.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await _service.deletePost(post.postId);
-              if (mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Laporan dihapus'), backgroundColor: Colors.red),
-                );
+              try {
+                await _service.deletePostWithAuth(
+                    post.postId, _currentUserId, _currentUserRole);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Laporan dihapus'),
+                        backgroundColor: Colors.red),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('Gagal menghapus: $e'),
+                        backgroundColor: Colors.red),
+                  );
+                }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8))),
             child: const Text('Hapus', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -269,8 +404,12 @@ class _DetailScreenState extends State<DetailScreen> {
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
     await _service.addComment(CommentModel(
-      commentId: '', postId: widget.postId, userId: _currentUserId,
-      username: _currentUsername, text: text, createdAt: DateTime.now(),
+      commentId: '',
+      postId: widget.postId,
+      userId: _currentUserId,
+      username: _currentUsername,
+      text: text,
+      createdAt: DateTime.now(),
     ));
     _commentController.clear();
   }
@@ -279,13 +418,17 @@ class _DetailScreenState extends State<DetailScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFFFF8E7),
+      backgroundColor:
+          isDark ? const Color(0xFF121212) : const Color(0xFFFFF8E7),
       body: StreamBuilder<PostModel?>(
         stream: _service.streamPost(widget.postId),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Color(0xFFF2994A)));
+          if (snapshot.connectionState == ConnectionState.waiting)
+            return const Center(
+                child: CircularProgressIndicator(color: Color(0xFFF2994A)));
           final post = snapshot.data;
-          if (post == null) return const Center(child: Text('Post tidak ditemukan'));
+          if (post == null)
+            return const Center(child: Text('Post tidak ditemukan'));
           return Stack(
             children: [
               _buildContent(post, isDark),
@@ -297,8 +440,11 @@ class _DetailScreenState extends State<DetailScreen> {
                   onTap: () => Navigator.pop(context),
                   child: Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle),
-                    child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                    decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.4),
+                        shape: BoxShape.circle),
+                    child: const Icon(Icons.arrow_back,
+                        color: Colors.white, size: 20),
                   ),
                 ),
               ),
@@ -316,141 +462,371 @@ class _DetailScreenState extends State<DetailScreen> {
     final isFull = slotCount >= 3;
     final isCompleted = post.status == 'Berhasil Ditangani';
     final isOwner = post.userId == _currentUserId;
-    final canEdit = isOwner; // Only owner can edit
-    final canDelete = isOwner || _isAdmin; // Owner or admin can delete
+    final canEdit = isOwner;
+    final canDelete = isOwner || _isAdmin;
 
     return CustomScrollView(slivers: [
       SliverToBoxAdapter(
         child: Stack(children: [
           post.imageBase64.isNotEmpty
-              ? Image.memory(base64Decode(post.imageBase64), height: 280, width: double.infinity, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(height: 280, color: const Color(0xFFFFF3E0), child: const Center(child: Icon(Icons.pets, size: 80, color: Color(0xFFF2994A)))))
-              : Container(height: 280, width: double.infinity, color: const Color(0xFFFFF3E0), child: const Center(child: Icon(Icons.pets, size: 80, color: Color(0xFFF2994A)))),
-          Positioned(top: MediaQuery.of(context).padding.top + 8, right: 16,
-            child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(color: _statusColor(post.status), borderRadius: BorderRadius.circular(16)),
-              child: Text(post.status, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)))),
+              ? Image.memory(base64Decode(post.imageBase64),
+                  height: 280,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                      height: 280,
+                      color: const Color(0xFFFFF3E0),
+                      child: const Center(
+                          child: Icon(Icons.pets,
+                              size: 80, color: Color(0xFFF2994A)))))
+              : Container(
+                  height: 280,
+                  width: double.infinity,
+                  color: const Color(0xFFFFF3E0),
+                  child: const Center(
+                      child: Icon(Icons.pets,
+                          size: 80, color: Color(0xFFF2994A)))),
+          Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              right: 16,
+              child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: _statusColor(post.status),
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Text(post.status,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)))),
         ]),
       ),
       // Title row with edit/delete buttons on the right
       SliverToBoxAdapter(
-        child: Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 0), child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(post.title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
-              const SizedBox(height: 6),
-              Text('oleh ${post.username}  •  ${_timeAgo(post.createdAt)}', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
-            ])),
-            if (canEdit) ...[
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditPostScreen(post: post))),
-                child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF2994A).withOpacity(0.1), shape: BoxShape.circle),
-                  child: const Icon(Icons.edit, color: Color(0xFFF2994A), size: 18))),
-            ],
-            if (canDelete) ...[
-              const SizedBox(width: 6),
-              GestureDetector(
-                onTap: () => _deletePost(post),
-                child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), shape: BoxShape.circle),
-                  child: const Icon(Icons.delete, color: Colors.red, size: 18))),
-            ],
-          ],
-        )),
+        child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(post.title,
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87)),
+                      const SizedBox(height: 6),
+                      Text(
+                          'oleh ${post.username}  •  ${_timeAgo(post.createdAt)}',
+                          style:
+                              TextStyle(fontSize: 13, color: Colors.grey[500])),
+                    ])),
+                if (canEdit) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => EditPostScreen(post: post))),
+                      child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                              color: const Color(0xFFF2994A).withOpacity(0.1),
+                              shape: BoxShape.circle),
+                          child: const Icon(Icons.edit,
+                              color: Color(0xFFF2994A), size: 18))),
+                ],
+                if (canDelete) ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                      onTap: () => _deletePost(post),
+                      child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              shape: BoxShape.circle),
+                          child: const Icon(Icons.delete,
+                              color: Colors.red, size: 18))),
+                ],
+              ],
+            )),
       ),
       SliverToBoxAdapter(
-        child: Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(post.description, style: TextStyle(fontSize: 14, height: 1.5, color: isDark ? Colors.grey[300] : Colors.grey[700])),
-          const SizedBox(height: 14),
-          // Categories & Animal Type
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            ...post.categories.map((cat) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: const Color(0xFFF2994A).withOpacity(0.12), borderRadius: BorderRadius.circular(14)),
-              child: Text(cat, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFF2994A))),
-            )),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: const Color(0xFF4CAF50).withOpacity(0.12), borderRadius: BorderRadius.circular(14)),
-              child: Text(post.animalType, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF4CAF50))),
-            ),
-          ]),
-          const SizedBox(height: 16),
-          // Location
-          Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!)),
-            child: Row(children: [
-              Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFF4CAF50).withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(Icons.location_on, color: Color(0xFF4CAF50), size: 20)),
-              const SizedBox(width: 12),
-              Expanded(child: Text(post.locationText.isNotEmpty ? post.locationText : 'Lokasi belum tersedia',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87))),
+        child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Categories chips
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: post.categories
+                    .map((cat) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFF2994A).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text('${_categoryEmoji(cat)} $cat',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFF2994A))),
+                        ))
+                    .toList(),
+              ),
+              // Animal type badge
+              if (post.animalType.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                      '${_animalEmoji(post.animalType)} ${post.animalType}',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF4CAF50))),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Text(post.description,
+                  style: TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700])),
+              const SizedBox(height: 14),
+              // Categories & Animal Type
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                ...post.categories.map((cat) => Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                          color: const Color(0xFFF2994A).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(14)),
+                      child: Text(cat,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFF2994A))),
+                    )),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF4CAF50).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(14)),
+                  child: Text(post.animalType,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF4CAF50))),
+                ),
+              ]),
+              const SizedBox(height: 16),
+              // Location
+              Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color:
+                              isDark ? Colors.grey[800]! : Colors.grey[200]!)),
+                  child: Row(children: [
+                    Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                            color: const Color(0xFF4CAF50).withOpacity(0.1),
+                            shape: BoxShape.circle),
+                        child: const Icon(Icons.location_on,
+                            color: Color(0xFF4CAF50), size: 20)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Text(
+                            post.locationText.isNotEmpty
+                                ? post.locationText
+                                : 'Lokasi belum tersedia',
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    isDark ? Colors.white : Colors.black87))),
+                  ])),
+              const SizedBox(height: 16),
+              // Volunteer slots
+              Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color:
+                              isDark ? Colors.grey[800]! : Colors.grey[200]!)),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          const Icon(Icons.people_outline,
+                              color: Color(0xFFF2994A), size: 20),
+                          const SizedBox(width: 8),
+                          const Text('Slot Relawan',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 14)),
+                          const Spacer(),
+                          Text('$slotCount/3',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 14))
+                        ]),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                                value: slotCount / 3,
+                                backgroundColor: isDark
+                                    ? Colors.grey[700]
+                                    : Colors.grey[200],
+                                color: isFull
+                                    ? const Color(0xFF4CAF50)
+                                    : const Color(0xFFF2994A),
+                                minHeight: 6)),
+                        const SizedBox(height: 8),
+                        Text(
+                            slotCount == 0
+                                ? 'Belum ada relawan'
+                                : '$slotCount relawan bergabung',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[500])),
+                      ])),
+              const SizedBox(height: 16),
+              // Action buttons
+              if (!isCompleted) ...[
+                Row(children: [
+                  Expanded(
+                      child: OutlinedButton.icon(
+                          onPressed: () => _service.toggleFavorite(
+                              widget.postId, _currentUserId),
+                          icon: Icon(
+                              isFav ? Icons.favorite : Icons.favorite_border,
+                              color: isFav ? Colors.red : Colors.grey,
+                              size: 18),
+                          label: Text('Favorit',
+                              style: TextStyle(
+                                  color:
+                                      isDark ? Colors.white : Colors.black87)),
+                          style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                              side: BorderSide(
+                                  color: isDark
+                                      ? Colors.grey[700]!
+                                      : Colors.grey[300]!)))),
+                  const SizedBox(width: 12),
+                  if (isJoined)
+                    Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                            onPressed: _showCompletionDialog,
+                            icon: const Icon(Icons.check_circle_outline,
+                                size: 18),
+                            label: const Text('Selesai',
+                                style: TextStyle(fontSize: 13)),
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF4CAF50),
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)))))
+                  else
+                    Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                            onPressed: isFull
+                                ? null
+                                : () => _showVolunteerDialog(post),
+                            icon: Icon(
+                                isFull ? Icons.block : Icons.volunteer_activism,
+                                size: 18),
+                            label: Text(
+                                isFull ? 'Slot Penuh' : 'Saya Ingin Menangani',
+                                style: const TextStyle(fontSize: 13)),
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF4CAF50),
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor: Colors.grey[400],
+                                disabledForegroundColor: Colors.white70,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10))))),
+                ]),
+                if (isJoined) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                          onPressed: () => _showVolunteerDialog(post),
+                          style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10))),
+                          child: const Text('Batal Menangani'))),
+                ],
+              ] else ...[
+                Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: const Color(0xFF4CAF50).withOpacity(0.3))),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(children: [
+                            Icon(Icons.check_circle,
+                                color: Color(0xFF4CAF50), size: 20),
+                            SizedBox(width: 8),
+                            Text('Berhasil Ditangani',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Color(0xFF4CAF50)))
+                          ]),
+                          if (post.completionNote.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(post.completionNote,
+                                style: TextStyle(
+                                    fontSize: 13, color: Colors.grey[700]))
+                          ],
+                          if (post.completionProofBase64.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.memory(
+                                    base64Decode(post.completionProofBase64),
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover))
+                          ],
+                        ])),
+              ],
+              const SizedBox(height: 20),
+              _buildCommentsSection(isDark),
+              const SizedBox(height: 16),
             ])),
-          const SizedBox(height: 16),
-          // Volunteer slots
-          Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [const Icon(Icons.people_outline, color: Color(0xFFF2994A), size: 20), const SizedBox(width: 8),
-                const Text('Slot Relawan', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)), const Spacer(),
-                Text('$slotCount/3', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14))]),
-              const SizedBox(height: 10),
-              ClipRRect(borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(value: slotCount / 3, backgroundColor: isDark ? Colors.grey[700] : Colors.grey[200],
-                  color: isFull ? const Color(0xFF4CAF50) : const Color(0xFFF2994A), minHeight: 6)),
-              const SizedBox(height: 8),
-              Text(slotCount == 0 ? 'Belum ada relawan' : '$slotCount relawan bergabung', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-            ])),
-          const SizedBox(height: 16),
-          // Action buttons
-          if (!isCompleted) ...[
-            Row(children: [
-              Expanded(child: OutlinedButton.icon(
-                onPressed: () => _service.toggleFavorite(widget.postId, _currentUserId),
-                icon: Icon(isFav ? Icons.favorite : Icons.favorite_border, color: isFav ? Colors.red : Colors.grey, size: 18),
-                label: Text('Favorit', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  side: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!)))),
-              const SizedBox(width: 12),
-              if (isJoined)
-                Expanded(flex: 2, child: ElevatedButton.icon(
-                  onPressed: _showCompletionDialog,
-                  icon: const Icon(Icons.check_circle_outline, size: 18),
-                  label: const Text('Selesai', style: TextStyle(fontSize: 13)),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4CAF50), foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)))))
-              else
-                Expanded(flex: 2, child: ElevatedButton.icon(
-                  onPressed: isFull ? null : () => _showVolunteerDialog(post),
-                  icon: Icon(isFull ? Icons.block : Icons.volunteer_activism, size: 18),
-                  label: Text(isFull ? 'Slot Penuh' : 'Saya Ingin Menangani', style: const TextStyle(fontSize: 13)),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4CAF50), foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey[400], disabledForegroundColor: Colors.white70,
-                    padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))))),
-            ]),
-            if (isJoined) ...[
-              const SizedBox(height: 8),
-              SizedBox(width: double.infinity, child: OutlinedButton(
-                onPressed: () => _showVolunteerDialog(post),
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                child: const Text('Batal Menangani'))),
-            ],
-          ] else ...[
-            Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF4CAF50).withOpacity(0.1), borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3))),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Row(children: [Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 20), SizedBox(width: 8),
-                  Text('Berhasil Ditangani', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF4CAF50)))]),
-                if (post.completionNote.isNotEmpty) ...[const SizedBox(height: 8), Text(post.completionNote, style: TextStyle(fontSize: 13, color: Colors.grey[700]))],
-                if (post.completionProofBase64.isNotEmpty) ...[const SizedBox(height: 8),
-                  ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(base64Decode(post.completionProofBase64), height: 150, width: double.infinity, fit: BoxFit.cover))],
-              ])),
-          ],
-          const SizedBox(height: 20),
-          _buildCommentsSection(isDark),
-          const SizedBox(height: 16),
-        ])),
       ),
     ]);
   }
@@ -461,32 +837,60 @@ class _DetailScreenState extends State<DetailScreen> {
       builder: (context, snapshot) {
         final comments = snapshot.data ?? [];
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [Icon(Icons.chat_bubble_outline, size: 18, color: Colors.grey[500]), const SizedBox(width: 6),
-            Text('Komentar (${comments.length})', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15))]),
+          Row(children: [
+            Icon(Icons.chat_bubble_outline, size: 18, color: Colors.grey[500]),
+            const SizedBox(width: 6),
+            Text('Komentar (${comments.length})',
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 15))
+          ]),
           const SizedBox(height: 12),
           if (comments.isEmpty)
-            Padding(padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: Text('Belum ada komentar', style: TextStyle(color: Colors.grey[400], fontSize: 13))))
+            Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                    child: Text('Belum ada komentar',
+                        style:
+                            TextStyle(color: Colors.grey[400], fontSize: 13))))
           else
             ...comments.map((c) {
-              final canDelete = _isAdmin || c.userId == _currentUserId;
+              final canDeleteComment = _isAdmin || c.userId == _currentUserId;
               return Container(
-                margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[100]!)),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(child: Text(c.username, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
-                    Text(_timeAgo(c.createdAt), style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-                    if (canDelete) ...[
-                      const SizedBox(width: 8),
-                      GestureDetector(onTap: () => _deleteComment(c),
-                        child: Icon(Icons.delete_outline, size: 16, color: Colors.red[300])),
-                    ],
-                  ]),
-                  const SizedBox(height: 4),
-                  Text(c.text, style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[300] : Colors.grey[700])),
-                ]),
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: isDark ? Colors.grey[800]! : Colors.grey[100]!)),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Expanded(
+                            child: Text(c.username,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13))),
+                        Text(_timeAgo(c.createdAt),
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey[500])),
+                        if (canDeleteComment) ...[
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                              onTap: () => _deleteComment(c),
+                              child: Icon(Icons.delete_outline,
+                                  size: 16, color: Colors.red[300])),
+                        ],
+                      ]),
+                      const SizedBox(height: 4),
+                      Text(c.text,
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: isDark
+                                  ? Colors.grey[300]
+                                  : Colors.grey[700])),
+                    ]),
               );
             }),
           const SizedBox(height: 12),
@@ -494,17 +898,41 @@ class _DetailScreenState extends State<DetailScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(children: [
-              Expanded(child: TextField(controller: _commentController,
-                style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
-                decoration: InputDecoration(hintText: 'Tulis komentar...', hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: Colors.grey[300]!)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Color(0xFFF2994A))),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), isDense: true))),
+              Expanded(
+                  child: TextField(
+                      controller: _commentController,
+                      style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Colors.white : Colors.black87),
+                      decoration: InputDecoration(
+                          hintText: 'Tulis komentar...',
+                          hintStyle:
+                              TextStyle(color: Colors.grey[400], fontSize: 14),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide: BorderSide(color: Colors.grey[300]!)),
+                          enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide: BorderSide(
+                                  color: isDark
+                                      ? Colors.grey[700]!
+                                      : Colors.grey[300]!)),
+                          focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFF2994A))),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          isDense: true))),
               const SizedBox(width: 8),
-              GestureDetector(onTap: _sendComment,
-                child: Container(padding: const EdgeInsets.all(10), decoration: const BoxDecoration(color: Color(0xFFF2994A), shape: BoxShape.circle),
-                  child: const Icon(Icons.send, color: Colors.white, size: 20))),
+              GestureDetector(
+                  onTap: _sendComment,
+                  child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                          color: Color(0xFFF2994A), shape: BoxShape.circle),
+                      child: const Icon(Icons.send,
+                          color: Colors.white, size: 20))),
             ]),
           ),
         ]);

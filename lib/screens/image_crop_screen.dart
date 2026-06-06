@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -91,7 +90,6 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
       final imgLeft = baseX * scale + tx;
       final imgTop = baseY * scale + ty;
       final scaledW = dispW * scale;
-      final scaledH = dispH * scale;
 
       // Pixel-per-screen ratio
       final pxPerScreen = _imgW / scaledW;
@@ -157,7 +155,7 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
               // area = full body minus appbar
               final appBarH = AppBar().preferredSize.height +
                   MediaQuery.of(context).padding.top;
-              final bottomH = 52.0; // hint bar height
+              const bottomH = 52.0; // hint bar height
               final area =
                   Size(box.size.width, box.size.height - appBarH - bottomH);
               final result = await _doCrop(area);

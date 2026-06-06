@@ -36,7 +36,6 @@ class FirestoreService {
       throw Exception('Anda harus login terlebih dahulu.');
     }
 
-    // Fetch the post to check ownership
     final postDoc = await _db.collection('posts').doc(postId).get();
     if (!postDoc.exists) {
       throw Exception('Postingan tidak ditemukan.');
@@ -44,9 +43,9 @@ class FirestoreService {
 
     final postOwnerId = postDoc.data()?['userId'] ?? '';
 
-    // Only allow edit if the current user is the post owner
     if (currentUid != postOwnerId) {
-      throw Exception('Forbidden: Anda tidak boleh mengedit postingan milik user lain.');
+      throw Exception(
+          'Forbidden: Anda tidak boleh mengedit postingan milik user lain.');
     }
 
     await _db.collection('posts').doc(postId).update(data);
@@ -61,7 +60,6 @@ class FirestoreService {
       throw Exception('Anda harus login terlebih dahulu.');
     }
 
-    // Fetch the post to check ownership
     final postDoc = await _db.collection('posts').doc(postId).get();
     if (!postDoc.exists) {
       throw Exception('Postingan tidak ditemukan.');
@@ -69,12 +67,12 @@ class FirestoreService {
 
     final postOwnerId = postDoc.data()?['userId'] ?? '';
 
-    // If not the owner, check if user is admin
     if (currentUid != postOwnerId) {
       final userDoc = await _db.collection('users').doc(currentUid).get();
       final userRole = userDoc.data()?['role'] ?? 'Pengguna';
       if (userRole != 'Admin') {
-        throw Exception('Forbidden: Anda tidak memiliki izin untuk menghapus postingan ini.');
+        throw Exception(
+            'Forbidden: Anda tidak memiliki izin untuk menghapus postingan ini.');
       }
     }
 
@@ -87,6 +85,21 @@ class FirestoreService {
       await doc.reference.delete();
     }
     await _db.collection('posts').doc(postId).delete();
+  }
+
+  /// Delete post with auth check — owner or admin can delete
+  Future<void> deletePostWithAuth(
+      String postId, String currentUserId, String userRole) async {
+    final doc = await _db.collection('posts').doc(postId).get();
+    if (!doc.exists) throw Exception('Post tidak ditemukan');
+
+    final postOwnerId = doc.data()?['userId'] ?? '';
+    if (postOwnerId != currentUserId && userRole != 'Admin') {
+      throw Exception(
+          'Forbidden: Anda tidak memiliki izin untuk menghapus postingan ini');
+    }
+
+    await deletePost(postId);
   }
 
   Future<PostModel?> getPost(String postId) async {
@@ -113,9 +126,13 @@ class FirestoreService {
 
     final favoriteBy = List<String>.from(doc.data()?['favoriteBy'] ?? []);
     if (favoriteBy.contains(uid)) {
-      await docRef.update({'favoriteBy': FieldValue.arrayRemove([uid])});
+      await docRef.update({
+        'favoriteBy': FieldValue.arrayRemove([uid])
+      });
     } else {
-      await docRef.update({'favoriteBy': FieldValue.arrayUnion([uid])});
+      await docRef.update({
+        'favoriteBy': FieldValue.arrayUnion([uid])
+      });
     }
   }
 
@@ -156,7 +173,9 @@ class FirestoreService {
 
   Future<void> cancelVolunteer(String postId, String uid) async {
     final docRef = _db.collection('posts').doc(postId);
-    await docRef.update({'handledBy': FieldValue.arrayRemove([uid])});
+    await docRef.update({
+      'handledBy': FieldValue.arrayRemove([uid])
+    });
 
     final doc = await docRef.get();
     final handledBy = List<String>.from(doc.data()?['handledBy'] ?? []);
@@ -246,13 +265,27 @@ class FirestoreService {
     return user?.username ?? 'Unknown';
   }
 
+  /// Check if username is available (not used by another user)
+  Future<bool> isUsernameAvailable(String username) async {
+    final snapshot = await _db
+        .collection('users')
+        .where('username', isEqualTo: username)
+        .limit(1)
+        .get();
+    return snapshot.docs.isEmpty;
+  }
+
   Future<int> countUserPosts(String uid) async {
-    final snapshot = await _db.collection('posts').where('userId', isEqualTo: uid).get();
+    final snapshot =
+        await _db.collection('posts').where('userId', isEqualTo: uid).get();
     return snapshot.docs.length;
   }
 
   Future<int> countUserHelps(String uid) async {
-    final snapshot = await _db.collection('posts').where('handledBy', arrayContains: uid).get();
+    final snapshot = await _db
+        .collection('posts')
+        .where('handledBy', arrayContains: uid)
+        .get();
     return snapshot.docs.length;
   }
 }

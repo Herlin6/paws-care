@@ -66,9 +66,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               width: 40, height: 4,
               margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.grey[400],
-                borderRadius: BorderRadius.circular(2),
+              decoration: const BoxDecoration(
+                color: Colors.grey,
+                borderRadius: BorderRadius.all(Radius.circular(2)),
               ),
             ),
             Text('Foto Profil',
@@ -78,8 +78,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF2994A).withOpacity(0.1),
+                decoration: const BoxDecoration(
+                  color: Color(0x1AF2994A),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.photo_library_outlined, color: Color(0xFFF2994A)),
@@ -98,8 +98,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                  decoration: const BoxDecoration(
+                    color: Color(0x1AFF0000),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.delete_outline, color: Colors.red),
@@ -163,15 +163,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (picked != null && mounted) {
       final bytes = await picked.readAsBytes();
       // Navigate to crop screen with square 1:1 ratio
-      final croppedBytes = await Navigator.push<Uint8List>(
-        context,
-        MaterialPageRoute(builder: (_) => ImageCropScreen(imageBytes: bytes, aspectRatio: 1.0)),
-      );
-      if (croppedBytes != null && mounted) {
+      final croppedBytes = await _openCropScreen(bytes);
+      if (!mounted) return;
+      if (croppedBytes != null) {
         final base64Str = base64Encode(croppedBytes);
         _showPhotoConfirmation(croppedBytes, base64Str);
       }
     }
+  }
+
+  Future<Uint8List?> _openCropScreen(Uint8List bytes) {
+    return Navigator.push<Uint8List>(
+      context,
+      MaterialPageRoute(builder: (_) => ImageCropScreen(imageBytes: bytes, aspectRatio: 1.0)),
+    );
+  }
+
+  void _showPasswordSnack(String message, {Color backgroundColor = const Color(0xFF4CAF50)}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: backgroundColor),
+    );
   }
 
   void _showPhotoConfirmation(Uint8List imageBytes, String base64Str) {
@@ -225,37 +236,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit Profil'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtrl, decoration: _editDeco('Username')),
-            const SizedBox(height: 12),
-            TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: _editDeco('Nomor Telepon')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await _service.updateUser(_currentUserId, {
-                'username': nameCtrl.text.trim(),
-                'phone': phoneCtrl.text.trim(),
-              });
-              _loadData();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profil diperbarui! ✅'), backgroundColor: Color(0xFF4CAF50)),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF2994A), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            child: const Text('Simpan', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final phone = phoneCtrl.text.trim();
+          final isPhoneEmpty = phone.isEmpty;
+          final isPhoneValid = isPhoneEmpty || (phone.length >= 12 && phone.length <= 13);
+          final isFormValid = nameCtrl.text.trim().isNotEmpty && isPhoneValid;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Edit Profil'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: _editDeco('Username'),
+                  onChanged: (_) => setDialogState(() {}),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.number,
+                  maxLength: 13,
+                  decoration: _editDeco('Nomor Telepon').copyWith(
+                    counterText: '',
+                    errorText: (!isPhoneEmpty && !isPhoneValid)
+                        ? 'Nomor telepon harus terdiri dari 12–13 digit angka.'
+                        : null,
+                    errorStyle: const TextStyle(fontSize: 11),
+                  ),
+                  onChanged: (val) {
+                    // Only allow digits
+                    final digitsOnly = val.replaceAll(RegExp(r'[^0-9]'), '');
+                    if (digitsOnly != val) {
+                      phoneCtrl.text = digitsOnly;
+                      phoneCtrl.selection = TextSelection.fromPosition(
+                        TextPosition(offset: digitsOnly.length),
+                      );
+                    }
+                    setDialogState(() {});
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              ElevatedButton(
+                onPressed: isFormValid
+                    ? () async {
+                        await _service.updateUser(_currentUserId, {
+                          'username': nameCtrl.text.trim(),
+                          'phone': phoneCtrl.text.trim(),
+                        });
+                        _loadData();
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(content: Text('Profil diperbarui! ✅'), backgroundColor: Color(0xFF4CAF50)),
+                          );
+                        }
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF2994A),
+                  disabledBackgroundColor: Colors.grey[400],
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -319,15 +371,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 try {
                   Navigator.pop(ctx);
                   await _authService.updatePassword(newPass);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Password berhasil diubah! ✅'), backgroundColor: Color(0xFF4CAF50)),
-                    );
-                  }
+                  if (!mounted) return;
+                  _showPasswordSnack('Password berhasil diubah! ✅');
                 } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal ubah password: $e'), backgroundColor: Colors.red));
-                  }
+                  if (!mounted) return;
+                  _showPasswordSnack('Gagal ubah password: $e', backgroundColor: Colors.red);
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF2994A), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
@@ -380,10 +428,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFFFF8E7),
       appBar: AppBar(
-        title: Row(children: [
-          const Icon(Icons.person, color: Color(0xFFF2994A), size: 22),
-          const SizedBox(width: 8),
-          const Text('Profil', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Row(children: [
+          Icon(Icons.person, color: Color(0xFFF2994A), size: 22),
+          SizedBox(width: 8),
+          Text('Profil', style: TextStyle(fontWeight: FontWeight.bold)),
         ]),
         backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         foregroundColor: isDark ? Colors.white : Colors.black87,
@@ -401,7 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Stack(children: [
                     CircleAvatar(
                       radius: 48,
-                      backgroundColor: const Color(0xFFF6D58A).withOpacity(0.5),
+                      backgroundColor: const Color(0x80F6D58A),
                       backgroundImage: _user?.photoBase64.isNotEmpty == true
                           ? MemoryImage(base64Decode(_user!.photoBase64))
                           : null,
@@ -429,7 +477,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _user?.isAdmin == true ? const Color(0xFFE53935).withOpacity(0.1) : const Color(0xFFF2994A).withOpacity(0.1),
+                    color: _user?.isAdmin == true ? const Color(0x1AE53935) : const Color(0x1AF2994A),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -469,7 +517,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.05), blurRadius: 8, offset: const Offset(0, 2))]),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 51 : 13), blurRadius: 8, offset: const Offset(0, 2))]),
       child: Column(children: [
         Icon(icon, color: color, size: 28), const SizedBox(height: 8),
         Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
@@ -485,7 +533,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.04), blurRadius: 6, offset: const Offset(0, 2))]),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 51 : 10), blurRadius: 6, offset: const Offset(0, 2))]),
         child: Row(children: [
           Icon(icon, color: isLogout ? Colors.red : Colors.grey[600], size: 22), const SizedBox(width: 14),
           Expanded(child: Text(label, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: isLogout ? Colors.red : isDark ? Colors.white : Colors.black87))),
@@ -499,11 +547,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.04), blurRadius: 6, offset: const Offset(0, 2))]),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 51 : 10), blurRadius: 6, offset: const Offset(0, 2))]),
       child: Row(children: [
         Icon(Icons.dark_mode_outlined, color: Colors.grey[600], size: 22), const SizedBox(width: 14),
         Expanded(child: Text('Dark Mode', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: isDark ? Colors.white : Colors.black87))),
-        Switch(value: isDark, onChanged: (_) => themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark, activeColor: const Color(0xFFF2994A)),
+        Switch(value: isDark, onChanged: (_) => themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark, activeThumbColor: const Color(0xFFF2994A)),
       ]),
     );
   }

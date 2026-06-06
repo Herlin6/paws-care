@@ -22,38 +22,52 @@ class PostCard extends StatelessWidget {
 
   Color _statusColor() {
     switch (post.status) {
-      case 'Butuh Bantuan': return const Color(0xFFE53935);
-      case 'Sedang Ditangani': return const Color(0xFFF2994A);
-      case 'Berhasil Ditangani': return const Color(0xFF4CAF50);
-      default: return Colors.grey;
+      case 'Butuh Bantuan':
+        return const Color(0xFFE53935);
+      case 'Sedang Ditangani':
+        return const Color(0xFFF2994A);
+      case 'Berhasil Ditangani':
+        return const Color(0xFF4CAF50);
+      default:
+        return Colors.grey;
     }
   }
 
   String _categoryEmoji(String cat) {
     switch (cat) {
-      case 'Hilang': return '🔍';
-      case 'Ditemukan': return '🤝';
-      case 'Kecelakaan': return '🚨';
-      case 'Mati': return '🪦';
-      case 'Terjebak': return '🕸️';
-      case 'Lainnya': return '🐾';
-      // Legacy categories
-      case 'Sakit': return '🩹';
-      case 'Kelaparan': return '🍽️';
-      case 'Adopsi': return '🏠';
-      case 'Sterilisasi': return '✂️';
-      default: return '🐾';
+      case 'Hilang':
+        return '🔍';
+      case 'Ditemukan':
+        return '📦';
+      case 'Kecelakaan':
+        return '🚗';
+      case 'Mati':
+        return '💀';
+      case 'Terjebak':
+        return '🪤';
+      case 'Sakit':
+        return '🩹';
+      case 'Lainnya':
+        return '🐾';
+      default:
+        return '🐾';
     }
   }
 
-  String _animalEmoji(String animal) {
-    switch (animal) {
-      case 'Kucing': return '🐱';
-      case 'Anjing': return '🐶';
-      case 'Burung': return '🐦';
-      case 'Kelinci': return '🐰';
-      case 'Reptil': return '🦎';
-      default: return '🐾';
+  String _animalEmoji(String type) {
+    switch (type) {
+      case 'Kucing':
+        return '🐱';
+      case 'Anjing':
+        return '🐶';
+      case 'Burung':
+        return '🐦';
+      case 'Kelinci':
+        return '🐰';
+      case 'Reptil':
+        return '🦎';
+      default:
+        return '🐾';
     }
   }
 
@@ -72,6 +86,11 @@ class PostCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final slotCount = post.handledBy.length;
 
+    final firstCat = post.categories.isNotEmpty ? post.categories.first : '';
+    final extraCatCount =
+        post.categories.length > 1 ? post.categories.length - 1 : 0;
+    final catEmoji = firstCat.isNotEmpty ? _categoryEmoji(firstCat) : '🐾';
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -80,7 +99,10 @@ class PostCard extends StatelessWidget {
           color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
-            BoxShadow(color: Colors.black.withAlpha(isDark ? 50 : 18), blurRadius: 14, offset: const Offset(0, 4)),
+            BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.2 : 0.07),
+                blurRadius: 14,
+                offset: const Offset(0, 4)),
           ],
         ),
         child: Column(
@@ -90,91 +112,153 @@ class PostCard extends StatelessWidget {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(18)),
                   child: post.imageBase64.isNotEmpty
-                      ? Image.memory(
-                          base64Decode(post.imageBase64),
-                          height: 200, width: double.infinity, fit: BoxFit.cover,
+                      ? Image.memory(base64Decode(post.imageBase64),
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => _buildPlaceholder())
                       : _buildPlaceholder(),
                 ),
-                // Gradient overlay at bottom of image for readability
+                // Category badge
                 Positioned(
-                  bottom: 0, left: 0, right: 0,
+                  top: 12,
+                  left: 12,
                   child: Container(
-                    height: 60,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(0)),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black.withAlpha(80)],
-                      ),
+                      color: isDark
+                          ? Colors.black87
+                          : Colors.white.withOpacity(0.92),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4)
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(catEmoji, style: const TextStyle(fontSize: 13)),
+                        const SizedBox(width: 4),
+                        Text(
+                            firstCat.isNotEmpty
+                                ? firstCat
+                                : 'Tanpa Kategori',
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? Colors.white
+                                    : Colors.black87)),
+                        if (extraCatCount > 0) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF2994A),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text('+$extraCatCount',
+                                style: const TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white)),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
-                // Category badges (multi-category)
-                Positioned(
-                  top: 12, left: 12,
-                  child: Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: post.categories.take(3).map((cat) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.black87 : Colors.white.withAlpha(235),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 4)],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(_categoryEmoji(cat), style: const TextStyle(fontSize: 11)),
-                            const SizedBox(width: 3),
-                            Text(cat, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
-                          ],
-                        ),
-                      );
-                    }).toList(),
+                // Animal type badge
+                if (post.animalType.isNotEmpty)
+                  Positioned(
+                    top: 12,
+                    right: 52,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50).withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4)
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(_animalEmoji(post.animalType),
+                              style: const TextStyle(fontSize: 12)),
+                          const SizedBox(width: 3),
+                          Text(post.animalType,
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white)),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
                 // Favorite button
                 Positioned(
-                  top: 12, right: 12,
+                  top: 12,
+                  right: 12,
                   child: GestureDetector(
                     onTap: onFavorite,
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(230),
+                        color: Colors.white.withOpacity(0.9),
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 4)],
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4)
+                        ],
                       ),
                       child: Icon(
-                        isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
                         size: 20,
-                        color: isFavorite ? const Color(0xFFE53935) : Colors.grey[500],
+                        color: isFavorite
+                            ? const Color(0xFFE53935)
+                            : Colors.grey[500],
                       ),
                     ),
                   ),
                 ),
-                // Volunteer count badge at bottom right of image
+                // Volunteer count badge
                 if (slotCount > 0)
                   Positioned(
-                    bottom: 10, right: 12,
+                    bottom: 10,
+                    right: 12,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(150),
+                        color: Colors.black.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.people_rounded, size: 14, color: Colors.white),
+                          const Icon(Icons.people_rounded,
+                              size: 14, color: Colors.white),
                           const SizedBox(width: 4),
-                          Text('$slotCount/3', style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600)),
+                          Text('$slotCount/3',
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
@@ -191,22 +275,37 @@ class PostCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(post.title,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    isDark ? Colors.white : Colors.black87),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _statusColor().withAlpha(25),
+                          color: _statusColor().withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(width: 6, height: 6, decoration: BoxDecoration(color: _statusColor(), shape: BoxShape.circle)),
+                            Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                    color: _statusColor(),
+                                    shape: BoxShape.circle)),
                             const SizedBox(width: 4),
-                            Text(post.status, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _statusColor())),
+                            Text(post.status,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: _statusColor())),
                           ],
                         ),
                       ),
@@ -214,40 +313,46 @@ class PostCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(post.description,
-                    style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : Colors.grey[600], height: 1.4),
-                    maxLines: 2, overflow: TextOverflow.ellipsis),
+                      style: TextStyle(
+                          fontSize: 13,
+                          color:
+                              isDark ? Colors.grey[400] : Colors.grey[600],
+                          height: 1.4),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      // Animal type badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4CAF50).withAlpha(25),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(_animalEmoji(post.animalType), style: const TextStyle(fontSize: 12)),
-                            const SizedBox(width: 3),
-                            Text(post.animalType, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF4CAF50))),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(Icons.location_on_outlined, size: 14, color: isDark ? Colors.grey[500] : Colors.grey[400]),
+                      Icon(Icons.location_on_outlined,
+                          size: 14,
+                          color:
+                              isDark ? Colors.grey[500] : Colors.grey[400]),
                       const SizedBox(width: 3),
                       Expanded(
                         child: Text(
-                          post.locationText.isNotEmpty ? post.locationText : 'Lokasi tidak tersedia',
-                          style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[500] : Colors.grey[400]),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                            post.locationText.isNotEmpty
+                                ? post.locationText
+                                : 'Lokasi tidak tersedia',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? Colors.grey[500]
+                                    : Colors.grey[400]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.access_time_rounded, size: 12, color: isDark ? Colors.grey[600] : Colors.grey[350]),
+                      Icon(Icons.access_time_rounded,
+                          size: 12,
+                          color:
+                              isDark ? Colors.grey[600] : Colors.grey[350]),
                       const SizedBox(width: 3),
-                      Text(_timeAgo(post.createdAt), style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[600] : Colors.grey[350])),
+                      Text(_timeAgo(post.createdAt),
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? Colors.grey[600]
+                                  : Colors.grey[350])),
                     ],
                   ),
                 ],
@@ -261,9 +366,12 @@ class PostCard extends StatelessWidget {
 
   Widget _buildPlaceholder() {
     return Container(
-      height: 200, width: double.infinity,
+      height: 200,
+      width: double.infinity,
       color: const Color(0xFFFFF3E0),
-      child: const Center(child: Icon(Icons.pets_rounded, size: 60, color: Color(0xFFF2994A))),
+      child: const Center(
+          child:
+              Icon(Icons.pets_rounded, size: 60, color: Color(0xFFF2994A))),
     );
   }
 }

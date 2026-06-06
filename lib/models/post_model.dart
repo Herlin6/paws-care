@@ -12,13 +12,15 @@ class PostModel {
   final String locationText;
   final String status;
   final DateTime createdAt;
+  final double latitude;
+  final double longitude;
   final List<String> favoriteBy;
   final List<String> handledBy;
   final String completionProofBase64;
   final String completionNote;
   final String completedByUid;
 
-  /// Getter for backward compatibility — returns first category or empty string
+  /// Backward-compatible getter: returns first category or empty string
   String get category => categories.isNotEmpty ? categories.first : '';
 
   PostModel({
@@ -29,9 +31,11 @@ class PostModel {
     required this.description,
     this.imageBase64 = '',
     this.categories = const [],
-    this.animalType = 'Lainnya',
+    this.animalType = '',
     this.locationText = '',
     this.status = 'Butuh Bantuan',
+    this.latitude = 0.0,
+    this.longitude = 0.0,
     required this.createdAt,
     this.favoriteBy = const [],
     this.handledBy = const [],
@@ -53,6 +57,8 @@ class PostModel {
       'animalType': animalType,
       'locationText': locationText,
       'status': status,
+      'latitude': latitude,
+      'longitude': longitude,
       'createdAt': Timestamp.fromDate(createdAt),
       'favoriteBy': favoriteBy,
       'handledBy': handledBy,
@@ -67,7 +73,9 @@ class PostModel {
     List<String> cats;
     if (map['categories'] != null && map['categories'] is List) {
       cats = List<String>.from(map['categories']);
-    } else if (map['category'] != null && (map['category'] as String).isNotEmpty) {
+    } else if (map['category'] != null &&
+        map['category'] is String &&
+        (map['category'] as String).isNotEmpty) {
       cats = [map['category'] as String];
     } else {
       cats = [];
@@ -81,8 +89,10 @@ class PostModel {
       description: map['description'] ?? '',
       imageBase64: map['imageBase64'] ?? '',
       categories: cats,
-      animalType: map['animalType'] ?? 'Lainnya',
+      animalType: map['animalType'] ?? '',
       locationText: map['locationText'] ?? '',
+      latitude: map['latitude'] != null ? (map['latitude'] as num).toDouble() : 0.0,
+      longitude: map['longitude'] != null ? (map['longitude'] as num).toDouble() : 0.0,
       status: map['status'] ?? 'Butuh Bantuan',
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
@@ -106,6 +116,8 @@ class PostModel {
     String? animalType,
     String? locationText,
     String? status,
+    double? latitude,
+    double? longitude,
     DateTime? createdAt,
     List<String>? favoriteBy,
     List<String>? handledBy,
@@ -124,10 +136,13 @@ class PostModel {
       animalType: animalType ?? this.animalType,
       locationText: locationText ?? this.locationText,
       status: status ?? this.status,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       createdAt: createdAt ?? this.createdAt,
       favoriteBy: favoriteBy ?? this.favoriteBy,
       handledBy: handledBy ?? this.handledBy,
-      completionProofBase64: completionProofBase64 ?? this.completionProofBase64,
+      completionProofBase64:
+          completionProofBase64 ?? this.completionProofBase64,
       completionNote: completionNote ?? this.completionNote,
       completedByUid: completedByUid ?? this.completedByUid,
     );

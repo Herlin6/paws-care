@@ -10,6 +10,11 @@ class AuthService {
   String? get currentUserId => _auth.currentUser?.uid;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  /// Check if username is available
+  Future<bool> isUsernameAvailable(String username) async {
+    return await _firestoreService.isUsernameAvailable(username);
+  }
+
   /// Register with email and password
   Future<User?> register({
     required String email,
@@ -18,6 +23,15 @@ class AuthService {
     String role = 'Pengguna',
   }) async {
     try {
+      // Check username uniqueness before creating account
+      final isAvailable = await _firestoreService.isUsernameAvailable(username);
+      if (!isAvailable) {
+        throw FirebaseAuthException(
+          code: 'username-already-in-use',
+          message: 'Username sudah digunakan, silakan gunakan username lain.',
+        );
+      }
+
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,

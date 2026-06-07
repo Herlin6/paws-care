@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:paws_care/main.dart';
 import 'package:paws_care/widgets/main_scaffold.dart';
 import 'package:paws_care/screens/login_screen.dart';
+import 'package:paws_care/services/fcm_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -48,6 +49,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   void _navigateBasedOnAuth() {
     final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Save/update FCM token and sync notification preferences for auto-login
+      final fcmService = FcmService();
+      fcmService.saveTokenForUser(user.uid);
+      fcmService.syncPreferencesForUser(user.uid);
+    }
     final destination = user != null ? const MainScaffold() : const LoginScreen();
 
     Navigator.pushReplacement(

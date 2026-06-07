@@ -20,10 +20,11 @@ class FirestoreService {
             .toList());
   }
 
-  Future<void> addPost(PostModel post) async {
+  Future<String> addPost(PostModel post) async {
     final docRef = _db.collection('posts').doc();
     final postWithId = post.copyWith(postId: docRef.id);
     await docRef.set(postWithId.toMap());
+    return docRef.id;
   }
 
   Future<void> updatePost(String postId, Map<String, dynamic> data) async {

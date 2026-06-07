@@ -4,7 +4,9 @@ import 'firebase_options.dart';
 import 'package:paws_care/screens/splash_screen.dart';
 import 'package:paws_care/services/auth_service.dart';
 import 'package:paws_care/services/notification_service.dart';
+import 'package:paws_care/services/fcm_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 /// Global theme notifier for dark mode toggle
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
@@ -14,6 +16,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Register background message handler
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   // Pastikan akun Admin ada
   final authService = AuthService();
@@ -26,6 +31,10 @@ void main() async {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
       AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+
+  // Inisialisasi FCM Service
+  final fcmService = FcmService();
+  await fcmService.init();
 
   runApp(const MainApp());
 }

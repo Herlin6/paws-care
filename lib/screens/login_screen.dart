@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:paws_care/services/auth_service.dart';
+import 'package:paws_care/services/fcm_service.dart';
 import 'package:paws_care/widgets/main_scaffold.dart';
 import 'package:paws_care/screens/register_screen.dart';
 
@@ -39,6 +40,10 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final user = await _authService.login(email: email, password: password);
       if (user != null && mounted) {
+        // Save FCM token and sync notification preferences for the logged-in user
+        final fcmService = FcmService();
+        fcmService.saveTokenForUser(user.uid);
+        fcmService.syncPreferencesForUser(user.uid);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainScaffold()),

@@ -9,6 +9,7 @@ import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/services/auth_service.dart';
 import 'package:paws_care/screens/login_screen.dart';
 import 'package:paws_care/screens/image_crop_screen.dart';
+import 'package:paws_care/screens/notification_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -503,6 +504,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildMenuItem(Icons.edit_outlined, 'Edit Profil', isDark, _showEditProfileDialog),
                 const SizedBox(height: 10),
                 _buildMenuItem(Icons.lock_outline, 'Ubah Password', isDark, _showChangePasswordDialog),
+                const SizedBox(height: 10),
+                _buildMenuItem(Icons.notifications_outlined, 'Notifikasi', isDark, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationSettingsScreen()));
+                }),
                 const SizedBox(height: 10),
                 _buildDarkModeItem(isDark),
                 const SizedBox(height: 10),

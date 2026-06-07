@@ -2,12 +2,14 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:paws_care/models/post_model.dart';
 import 'package:paws_care/models/comment_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:paws_care/services/firestore_service.dart';
+import 'package:paws_care/services/notification_api_service.dart';
 import 'package:paws_care/screens/edit_post_screen.dart';
 
 class DetailScreen extends StatefulWidget {
@@ -89,7 +91,10 @@ class _DetailScreenState extends State<DetailScreen> {
                 await _service.cancelVolunteer(widget.postId, _currentUserId);
               } else {
                 final success = await _service.joinVolunteer(widget.postId, _currentUserId);
-                if (!success && mounted) {
+                if (success) {
+                  // Kirim notifikasi ke pemilik post
+                  _sendVolunteerJoinNotification(post);
+                } else if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Slot relawan sudah penuh!')),
                   );
@@ -204,6 +209,8 @@ class _DetailScreenState extends State<DetailScreen> {
                             return;
                           }
                           await _service.markCompleted(postId: widget.postId, uid: _currentUserId, proofBase64: proofBase64, note: noteController.text.trim());
+                          // Kirim notifikasi laporan selesai
+                          _sendCompletionNotification();
                           if (context.mounted) {
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kasus ditandai selesai! ✅'), backgroundColor: Color(0xFF4CAF50)));
@@ -287,6 +294,88 @@ class _DetailScreenState extends State<DetailScreen> {
       username: _currentUsername, text: text, createdAt: DateTime.now(),
     ));
     _commentController.clear();
+
+    // Kirim notifikasi komentar baru ke pemilik post & relawan
+    _sendCommentNotification();
+  }
+
+  // ============================================================
+  // NOTIFICATION HELPERS
+  // ============================================================
+
+  /// Kirim notifikasi komentar baru ke pemilik post dan relawan
+  Future<void> _sendCommentNotification() async {
+    try {
+      final post = await _service.getPost(widget.postId);
+      if (post == null) return;
+
+      final notifApi = NotificationApiService();
+      final db = FirebaseFirestore.instance;
+
+      // Kumpulkan semua UID penerima (owner + volunteers), kecuali pengirim
+      final recipientUids = <String>{};
+      if (post.userId != _currentUserId) {
+        recipientUids.add(post.userId);
+      }
+      for (final volUid in post.handledBy) {
+        if (volUid != _currentUserId) {
+          recipientUids.add(volUid);
+        }
+      }
+
+      // Ambil token semua penerima dan kirim notifikasi
+      for (final uid in recipientUids) {
+        final userDoc = await db.collection('users').doc(uid).get();
+        final token = userDoc.data()?['fcmToken'] as String?;
+        if (token != null && token.isNotEmpty) {
+          notifApi.sendNotification(
+            token: token,
+            title: '💬 Komentar Baru',
+            body: '$_currentUsername mengomentari: ${post.title}',
+            data: {'postId': widget.postId},
+          );
+        }
+      }
+    } catch (_) {}
+  }
+
+  /// Kirim notifikasi relawan bergabung ke pemilik post
+  Future<void> _sendVolunteerJoinNotification(PostModel post) async {
+    try {
+      if (post.userId == _currentUserId) return;
+
+      final db = FirebaseFirestore.instance;
+      final ownerDoc = await db.collection('users').doc(post.userId).get();
+      final ownerToken = ownerDoc.data()?['fcmToken'] as String?;
+      if (ownerToken != null && ownerToken.isNotEmpty) {
+        NotificationApiService().sendNotification(
+          token: ownerToken,
+          title: '🤝 Relawan Bergabung',
+          body: '$_currentUsername bergabung menangani: ${post.title}',
+          data: {'postId': widget.postId},
+        );
+      }
+    } catch (_) {}
+  }
+
+  /// Kirim notifikasi laporan selesai ke pemilik post
+  Future<void> _sendCompletionNotification() async {
+    try {
+      final post = await _service.getPost(widget.postId);
+      if (post == null || post.userId == _currentUserId) return;
+
+      final db = FirebaseFirestore.instance;
+      final ownerDoc = await db.collection('users').doc(post.userId).get();
+      final ownerToken = ownerDoc.data()?['fcmToken'] as String?;
+      if (ownerToken != null && ownerToken.isNotEmpty) {
+        NotificationApiService().sendNotification(
+          token: ownerToken,
+          title: '✅ Laporan Selesai',
+          body: '${post.title} berhasil ditangani!',
+          data: {'postId': widget.postId},
+        );
+      }
+    } catch (_) {}
   }
 
   @override

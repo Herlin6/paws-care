@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:paws_care/services/auth_service.dart';
+import 'package:paws_care/services/fcm_service.dart';
 import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/widgets/main_scaffold.dart';
 
@@ -125,6 +126,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final user = await _authService.register(email: email, password: password, username: name);
       if (user != null && mounted) {
+        // Save FCM token for the new user
+        FcmService().saveTokenForUser(user.uid);
         Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const MainScaffold()), (route) => false);
       }
     } on FirebaseAuthException catch (e) {

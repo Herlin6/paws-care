@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:paws_care/models/post_model.dart';
 import 'package:paws_care/services/firestore_service.dart';
+import 'package:paws_care/services/notification_api_service.dart';
 import 'package:paws_care/services/auth_service.dart';
 import 'package:paws_care/widgets/main_scaffold.dart';
 import 'package:paws_care/screens/image_crop_screen.dart';
@@ -229,7 +230,26 @@ class _AddPostScreenState extends State<AddPostScreen> {
     );
 
     try {
-      await _service.addPost(post);
+      final newPostId = await _service.addPost(post);
+
+      // Kirim notifikasi ke topic berdasarkan kategori & jenis hewan
+      final notifApi = NotificationApiService();
+      String sanitize(String s) => s.toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-zA-Z0-9\-_.~%]'), '');
+      for (final cat in post.categories) {
+        notifApi.sendToTopic(
+          topic: 'category_${sanitize(cat)}',
+          title: '📢 Laporan Baru: ${post.title}',
+          body: '${post.username} melaporkan ${post.animalType} — $cat',
+          data: {'postId': newPostId},
+        );
+      }
+      notifApi.sendToTopic(
+        topic: 'animal_${sanitize(post.animalType)}',
+        title: '📢 Laporan Baru: ${post.title}',
+        body: '${post.username} melaporkan ${post.animalType}',
+        data: {'postId': newPostId},
+      );
+
       if (mounted) {
         _titleController.clear();
         _descController.clear();

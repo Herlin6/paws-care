@@ -131,25 +131,41 @@ class _MapScreenState extends State<MapScreen> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
+                        // Reporter name
                         Row(
                           children: [
+                            Icon(Icons.person_outline, size: 14, color: Colors.grey[500]),
+                            const SizedBox(width: 4),
+                            Text(
+                              post.username,
+                              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        // Animal type + Status
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            // Animal type badge
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF2994A).withValues(alpha: 0.15),
+                                color: const Color(0xFF4CAF50).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                post.category,
+                                '${PostModel.animalTypeEmoji(post.animalType)} ${post.animalType}',
                                 style: const TextStyle(
-                                  color: Color(0xFFF2994A),
-                                  fontSize: 12,
+                                  color: Color(0xFF4CAF50),
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            // Status badge
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
@@ -168,7 +184,7 @@ class _MapScreenState extends State<MapScreen> {
                                       : post.status == 'Sedang Ditangani'
                                           ? Colors.orange
                                           : Colors.red,
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -180,7 +196,42 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+
+              // Categories chips
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: post.categories.map((cat) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF2994A).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${PostModel.categoryEmoji(cat)} $cat',
+                    style: const TextStyle(
+                      color: Color(0xFFF2994A),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )).toList(),
+              ),
+              const SizedBox(height: 12),
+
+              // Date info
+              Row(
+                children: [
+                  Icon(Icons.calendar_today, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${post.createdAt.day}/${post.createdAt.month}/${post.createdAt.year}  ${post.createdAt.hour.toString().padLeft(2, '0')}:${post.createdAt.minute.toString().padLeft(2, '0')}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               
               // Location Info
               Container(

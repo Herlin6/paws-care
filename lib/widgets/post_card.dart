@@ -29,16 +29,6 @@ class PostCard extends StatelessWidget {
     }
   }
 
-  String _categoryEmoji() {
-    switch (post.category) {
-      case 'Sakit': return '🩹';
-      case 'Kelaparan': return '🍽️';
-      case 'Adopsi': return '🏠';
-      case 'Sterilisasi': return '✂️';
-      default: return '🐾';
-    }
-  }
-
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inDays > 30) return '${(diff.inDays / 30).floor()} bulan lalu';
@@ -95,24 +85,52 @@ class PostCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Category badge
+                // Category badges (multi-category)
                 Positioned(
                   top: 12, left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.black87 : Colors.white.withAlpha(235),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 4)],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_categoryEmoji(), style: const TextStyle(fontSize: 13)),
-                        const SizedBox(width: 4),
-                        Text(post.category, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
-                      ],
-                    ),
+                  child: Row(
+                    children: [
+                      // Animal type badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.black87 : Colors.white.withAlpha(235),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 4)],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(PostModel.animalTypeEmoji(post.animalType), style: const TextStyle(fontSize: 12)),
+                            const SizedBox(width: 3),
+                            Text(post.animalType, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      // First category badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.black87 : Colors.white.withAlpha(235),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 4)],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(PostModel.categoryEmoji(post.categories.first), style: const TextStyle(fontSize: 12)),
+                            const SizedBox(width: 3),
+                            Text(
+                              post.categories.length > 1
+                                  ? '${post.categories.first} +${post.categories.length - 1}'
+                                  : post.categories.first,
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 // Favorite button

@@ -107,6 +107,7 @@ class _DetailScreenState extends State<DetailScreen> {
     Uint8List? proofBytes;
     String proofBase64 = '';
     final noteController = TextEditingController();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
@@ -117,9 +118,9 @@ class _DetailScreenState extends State<DetailScreen> {
           builder: (context, setModalState) {
             return Container(
               padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              decoration: BoxDecoration(
+                color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -129,15 +130,24 @@ class _DetailScreenState extends State<DetailScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Upload Bukti Penyelesaian', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        GestureDetector(onTap: () => Navigator.pop(ctx), child: const Icon(Icons.close, color: Colors.grey)),
+                        Text('Upload Bukti Penyelesaian',
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isDarkMode ? Colors.white : Colors.black)),
+                        GestureDetector(
+                            onTap: () => Navigator.pop(ctx),
+                            child: Icon(Icons.close, color: isDarkMode ? Colors.grey[400] : Colors.grey)),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Upload foto sebagai bukti bahwa kasus ini sudah selesai ditangani.',
-                          style: TextStyle(fontSize: 13, color: Color(0xFF666666))),
+                      child: Text(
+                          'Upload foto sebagai bukti bahwa kasus ini sudah selesai ditangani.',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: isDarkMode ? Colors.grey[300] : Colors.black87)),
                     ),
                     const SizedBox(height: 16),
                     GestureDetector(
@@ -155,9 +165,9 @@ class _DetailScreenState extends State<DetailScreen> {
                       child: Container(
                         height: 180, width: double.infinity,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF9F9F6),
+                          color: isDarkMode ? const Color(0xFF2C2C2C) : const Color(0xFFF9F9F6),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFD5D5C8), width: 1.5),
+                          border: Border.all(color: isDarkMode ? Colors.grey[700]! : const Color(0xFFD5D5C8), width: 1.5),
                         ),
                         child: proofBytes != null
                             ? ClipRRect(borderRadius: BorderRadius.circular(14),
@@ -172,11 +182,14 @@ class _DetailScreenState extends State<DetailScreen> {
                     const SizedBox(height: 14),
                     TextField(
                       controller: noteController,
+                      style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
                       decoration: InputDecoration(
                         hintText: 'Tambahkan keterangan (opsional)...',
                         hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                        filled: true,
+                        fillColor: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!)),
                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF4CAF50))),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
@@ -317,7 +330,12 @@ class _DetailScreenState extends State<DetailScreen> {
     final isFull = slotCount >= 3;
     final isCompleted = post.status == 'Berhasil Ditangani';
     final isOwner = post.userId == _currentUserId;
-    final canEditDelete = isOwner || _isAdmin;
+
+    // Admin access control:
+    // - Admin can DELETE any post
+    // - Admin can only EDIT their own posts
+    final canDelete = isOwner || _isAdmin;
+    final canEdit = isOwner; // Admin can only edit own posts
 
     return CustomScrollView(slivers: [
       SliverToBoxAdapter(
@@ -342,12 +360,14 @@ class _DetailScreenState extends State<DetailScreen> {
               const SizedBox(height: 6),
               Text('oleh ${post.username}  •  ${_timeAgo(post.createdAt)}', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
             ])),
-            if (canEditDelete) ...[
+            if (canEdit) ...[
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditPostScreen(post: post))),
                 child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF2994A).withValues(alpha: 0.1), shape: BoxShape.circle),
                   child: const Icon(Icons.edit, color: Color(0xFFF2994A), size: 18))),
+            ],
+            if (canDelete) ...[
               const SizedBox(width: 6),
               GestureDetector(
                 onTap: () => _deletePost(post),
@@ -359,6 +379,9 @@ class _DetailScreenState extends State<DetailScreen> {
       ),
       SliverToBoxAdapter(
         child: Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Categories & Animal Type chips
+          _buildCategoryAnimalChips(post, isDark),
+          const SizedBox(height: 14),
           Text(post.description, style: TextStyle(fontSize: 14, height: 1.5, color: isDark ? Colors.grey[300] : Colors.grey[700])),
           const SizedBox(height: 16),
           // Location (Clickable - opens Google Maps)
@@ -430,6 +453,48 @@ class _DetailScreenState extends State<DetailScreen> {
         ])),
       ),
     ]);
+  }
+
+  /// Build category and animal type chips row
+  Widget _buildCategoryAnimalChips(PostModel post, bool isDark) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        // Animal type chip
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xFF4CAF50).withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(PostModel.animalTypeEmoji(post.animalType), style: const TextStyle(fontSize: 13)),
+              const SizedBox(width: 4),
+              Text(post.animalType, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF4CAF50))),
+            ],
+          ),
+        ),
+        // Category chips
+        ...post.categories.map((cat) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF2994A).withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(PostModel.categoryEmoji(cat), style: const TextStyle(fontSize: 13)),
+              const SizedBox(width: 4),
+              Text(cat, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFF2994A))),
+            ],
+          ),
+        )),
+      ],
+    );
   }
 
   Widget _buildLocationCard(PostModel post, bool isDark) {

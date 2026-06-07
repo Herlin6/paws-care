@@ -30,7 +30,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
   String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  String _selectedCategory = 'Sakit';
+  List<String> _selectedCategories = ['Hilang'];
+  String _selectedAnimalType = 'Kucing';
   String _imageBase64 = '';
   double? _latitude;
   double? _longitude;
@@ -41,13 +42,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
   bool _useGps = true; // true = GPS otomatis, false = manual
   _GpsStatus _gpsStatus = _GpsStatus.loading;
   String _gpsErrorMessage = '';
-
-  final List<Map<String, String>> _categories = [
-    {'label': 'Sakit', 'emoji': '🩹'},
-    {'label': 'Kelaparan', 'emoji': '🍽️'},
-    {'label': 'Adopsi', 'emoji': '🏠'},
-    {'label': 'Sterilisasi', 'emoji': '✂️'},
-  ];
 
   @override
   void initState() {
@@ -174,6 +168,18 @@ class _AddPostScreenState extends State<AddPostScreen> {
     }
   }
 
+  void _toggleCategory(String category) {
+    setState(() {
+      if (_selectedCategories.contains(category)) {
+        if (_selectedCategories.length > 1) {
+          _selectedCategories.remove(category);
+        }
+      } else {
+        _selectedCategories.add(category);
+      }
+    });
+  }
+
   Future<void> _submit() async {
     final title = _titleController.text.trim();
     final desc = _descController.text.trim();
@@ -210,7 +216,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
       title: title,
       description: desc,
       imageBase64: _imageBase64,
-      category: _selectedCategory,
+      categories: List<String>.from(_selectedCategories),
+      animalType: _selectedAnimalType,
       locationText: loc,
       locationDetail: locDetail,
       latitude: _useGps ? (_latitude ?? 0.0) : 0.0,
@@ -232,7 +239,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
           _imageBase64 = '';
           _imageBytes = null;
           _originalImageBytes = null;
-          _selectedCategory = 'Sakit';
+          _selectedCategories = ['Hilang'];
+          _selectedAnimalType = 'Kucing';
           _latitude = null;
           _longitude = null;
           _useGps = true;
@@ -437,48 +445,11 @@ class _AddPostScreenState extends State<AddPostScreen> {
                 decoration: _inputDecoration(
                     'Jelaskan kondisi hewan yang ditemukan...', isDark)),
             const SizedBox(height: 20),
-            Text('Kategori',
-                style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: isDark ? Colors.white : Colors.black87)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: _categories.map((cat) {
-                final isSelected = _selectedCategory == cat['label'];
-                return GestureDetector(
-                  onTap: () =>
-                      setState(() => _selectedCategory = cat['label']!),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFFF2994A)
-                          : isDark
-                              ? const Color(0xFF2C2C2C)
-                              : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: isSelected
-                              ? const Color(0xFFF2994A)
-                              : Colors.grey[300]!),
-                    ),
-                    child: Text('${cat['emoji']} ${cat['label']}',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected
-                                ? Colors.white
-                                : isDark
-                                    ? Colors.grey[300]
-                                    : Colors.black87)),
-                  ),
-                );
-              }).toList(),
-            ),
+            // ===== JENIS HEWAN =====
+            _buildAnimalTypeSection(isDark),
+            const SizedBox(height: 20),
+            // ===== KATEGORI (MULTI-SELECT) =====
+            _buildCategorySection(isDark),
             const SizedBox(height: 20),
             // ===== LOCATION SECTION =====
             _buildLocationSection(isDark),
@@ -509,6 +480,135 @@ class _AddPostScreenState extends State<AddPostScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAnimalTypeSection(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.pets, size: 18, color: isDark ? Colors.white : Colors.black87),
+            const SizedBox(width: 6),
+            Text('Jenis Hewan',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black87)),
+            const Text(' *', style: TextStyle(color: Colors.red, fontSize: 14)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: PostModel.availableAnimalTypes.map((type) {
+            final isSelected = _selectedAnimalType == type;
+            return GestureDetector(
+              onTap: () => setState(() => _selectedAnimalType = type),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFF4CAF50)
+                      : isDark
+                          ? const Color(0xFF2C2C2C)
+                          : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFF4CAF50)
+                          : Colors.grey[300]!),
+                ),
+                child: Text(
+                  '${PostModel.animalTypeEmoji(type)} $type',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? Colors.white
+                          : isDark
+                              ? Colors.grey[300]
+                              : Colors.black87),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategorySection(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.category, size: 18, color: isDark ? Colors.white : Colors.black87),
+            const SizedBox(width: 6),
+            Text('Kategori',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black87)),
+            const SizedBox(width: 6),
+            Text('(bisa pilih lebih dari satu)',
+                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: PostModel.availableCategories.map((cat) {
+            final isSelected = _selectedCategories.contains(cat);
+            return GestureDetector(
+              onTap: () => _toggleCategory(cat),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFFF2994A)
+                      : isDark
+                          ? const Color(0xFF2C2C2C)
+                          : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFFF2994A)
+                          : Colors.grey[300]!),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isSelected)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 4),
+                        child: Icon(Icons.check, size: 14, color: Colors.white),
+                      ),
+                    Text(
+                      '${PostModel.categoryEmoji(cat)} $cat',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected
+                              ? Colors.white
+                              : isDark
+                                  ? Colors.grey[300]
+                                  : Colors.black87),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -733,7 +833,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
       ),
     );
 
-    // Wrap in a Column to add optional location text field
+    // Wrap in a Column to add editable location text field
     return Column(
       key: const ValueKey('gps'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -741,11 +841,51 @@ class _AddPostScreenState extends State<AddPostScreen> {
         statusCard,
         if (_gpsStatus == _GpsStatus.success) ...[
           const SizedBox(height: 10),
+          // Alamat utama - editable by user (tidak mengubah koordinat GPS)
+          TextField(
+            controller: _locationController,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            decoration: InputDecoration(
+              hintText: 'Alamat lokasi (editable, mis: "Jl. Merdeka No. 10")',
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
+              prefixIcon: Icon(Icons.location_on, color: Colors.grey[400], size: 20),
+              filled: true,
+              fillColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!)),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!)),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      const BorderSide(color: Color(0xFFF2994A), width: 1.5)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 12, color: Colors.grey[400]),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  'Alamat bisa diedit tanpa mengubah koordinat GPS.',
+                  style: TextStyle(fontSize: 10, color: Colors.grey[400]),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
           TextField(
             controller: _locationDetailController,
             style: TextStyle(color: isDark ? Colors.white : Colors.black87),
             decoration: InputDecoration(
-              hintText: 'Nama lokasi (opsional, mis: "Depan Indomaret Jl. Merdeka")',
+              hintText: 'Detail lokasi (opsional, mis: "Depan Indomaret")',
               hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
               prefixIcon: Icon(Icons.edit_note, color: Colors.grey[400], size: 20),
               filled: true,

@@ -7,7 +7,8 @@ class PostModel {
   final String title;
   final String description;
   final String imageBase64;
-  final String category;
+  final List<String> categories;
+  final String animalType;
   final String locationText;
   final String locationDetail;
   final double latitude;
@@ -27,7 +28,8 @@ class PostModel {
     required this.title,
     required this.description,
     this.imageBase64 = '',
-    required this.category,
+    required this.categories,
+    this.animalType = 'Lainnya',
     this.latitude = 0.0,
     this.longitude = 0.0,
     this.locationText = '',
@@ -41,6 +43,69 @@ class PostModel {
     this.completedByUid = '',
   });
 
+  /// Daftar kategori yang tersedia
+  static const List<String> availableCategories = [
+    'Hilang',
+    'Ditemukan',
+    'Kecelakaan',
+    'Mati',
+    'Terjebak',
+    'Sakit',
+    'Lainnya',
+  ];
+
+  /// Daftar jenis hewan yang tersedia
+  static const List<String> availableAnimalTypes = [
+    'Kucing',
+    'Anjing',
+    'Burung',
+    'Kelinci',
+    'Reptil',
+    'Lainnya',
+  ];
+
+  /// Emoji untuk kategori
+  static String categoryEmoji(String category) {
+    switch (category) {
+      case 'Hilang':
+        return '🔍';
+      case 'Ditemukan':
+        return '📦';
+      case 'Kecelakaan':
+        return '🚨';
+      case 'Mati':
+        return '💀';
+      case 'Terjebak':
+        return '🪤';
+      case 'Sakit':
+        return '🩹';
+      case 'Lainnya':
+        return '📋';
+      default:
+        return '🐾';
+    }
+  }
+
+  /// Emoji untuk jenis hewan
+  static String animalTypeEmoji(String type) {
+    switch (type) {
+      case 'Kucing':
+        return '🐱';
+      case 'Anjing':
+        return '🐶';
+      case 'Burung':
+        return '🐦';
+      case 'Kelinci':
+        return '🐰';
+      case 'Reptil':
+        return '🦎';
+      case 'Lainnya':
+        return '🐾';
+      default:
+        return '🐾';
+    }
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'postId': postId,
@@ -49,7 +114,8 @@ class PostModel {
       'title': title,
       'description': description,
       'imageBase64': imageBase64,
-      'category': category,
+      'categories': categories,
+      'animalType': animalType,
       'locationText': locationText,
       'locationDetail': locationDetail,
       'latitude': latitude,
@@ -65,6 +131,18 @@ class PostModel {
   }
 
   factory PostModel.fromMap(Map<String, dynamic> map, String docId) {
+    // Handle migration: old data may have 'category' as String
+    List<String> cats;
+    if (map['categories'] != null) {
+      cats = List<String>.from(map['categories']);
+    } else if (map['category'] != null && map['category'] is String) {
+      // Migration from old single-category format
+      final oldCat = map['category'] as String;
+      cats = oldCat.isNotEmpty ? [oldCat] : ['Lainnya'];
+    } else {
+      cats = ['Lainnya'];
+    }
+
     return PostModel(
       postId: docId,
       userId: map['userId'] ?? '',
@@ -72,7 +150,8 @@ class PostModel {
       title: map['title'] ?? '',
       description: map['description'] ?? '',
       imageBase64: map['imageBase64'] ?? '',
-      category: map['category'] ?? '',
+      categories: cats,
+      animalType: map['animalType'] ?? 'Lainnya',
       locationText: map['locationText'] ?? '',
       locationDetail: map['locationDetail'] ?? '',
       latitude: (map['latitude'] ?? 0).toDouble(),
@@ -96,7 +175,8 @@ class PostModel {
     String? title,
     String? description,
     String? imageBase64,
-    String? category,
+    List<String>? categories,
+    String? animalType,
     String? locationText,
     String? locationDetail,
     double? latitude,
@@ -116,7 +196,8 @@ class PostModel {
       title: title ?? this.title,
       description: description ?? this.description,
       imageBase64: imageBase64 ?? this.imageBase64,
-      category: category ?? this.category,
+      categories: categories ?? this.categories,
+      animalType: animalType ?? this.animalType,
       locationText: locationText ?? this.locationText,
       locationDetail: locationDetail ?? this.locationDetail,
       latitude: latitude ?? this.latitude,

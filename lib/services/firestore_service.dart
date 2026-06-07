@@ -30,6 +30,38 @@ class FirestoreService {
     await _db.collection('posts').doc(postId).update(data);
   }
 
+  /// Update post with authorization check.
+  /// Admin can only edit their own posts. Admin can delete anyone's post.
+  /// Throws exception if admin tries to edit another user's post.
+  Future<void> updatePostWithAuth(
+    String postId,
+    Map<String, dynamic> data,
+    String currentUserId,
+    String currentUserRole,
+  ) async {
+    // Fetch the post to check ownership
+    final doc = await _db.collection('posts').doc(postId).get();
+    if (!doc.exists) {
+      throw Exception('Post tidak ditemukan');
+    }
+
+    final postUserId = doc.data()?['userId'] ?? '';
+
+    // If admin and NOT the owner, forbid editing
+    if (currentUserRole == 'Admin' && postUserId != currentUserId) {
+      throw Exception(
+          'Forbidden: Admin tidak boleh mengedit postingan milik user lain');
+    }
+
+    // If not admin and not the owner, forbid editing
+    if (currentUserRole != 'Admin' && postUserId != currentUserId) {
+      throw Exception(
+          'Forbidden: Anda tidak memiliki izin untuk mengedit postingan ini');
+    }
+
+    await _db.collection('posts').doc(postId).update(data);
+  }
+
   Future<void> deletePost(String postId) async {
     final commentsSnapshot = await _db
         .collection('comments')
@@ -206,5 +238,15 @@ class FirestoreService {
   Future<int> countUserHelps(String uid) async {
     final snapshot = await _db.collection('posts').where('handledBy', arrayContains: uid).get();
     return snapshot.docs.length;
+  }
+
+  /// Check if a username is available (not already used by another user)
+  Future<bool> isUsernameAvailable(String username) async {
+    final snapshot = await _db
+        .collection('users')
+        .where('username', isEqualTo: username)
+        .limit(1)
+        .get();
+    return snapshot.docs.isEmpty;
   }
 }

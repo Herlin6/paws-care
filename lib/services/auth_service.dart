@@ -11,12 +11,19 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   /// Register with email and password
+  /// Checks username availability before creating account
   Future<User?> register({
     required String email,
     required String password,
     required String username,
     String role = 'Pengguna',
   }) async {
+    // Check username availability first
+    final isAvailable = await _firestoreService.isUsernameAvailable(username);
+    if (!isAvailable) {
+      throw Exception('Username sudah digunakan, silakan gunakan username lain.');
+    }
+
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,

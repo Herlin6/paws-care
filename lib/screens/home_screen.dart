@@ -20,16 +20,30 @@ class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
   final TextEditingController _searchController = TextEditingController();
   String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
-  String _selectedCategory = 'Semua';
+  final Set<String> _selectedCategories = {};
+  String _selectedAnimalType = 'Semua';
   String _searchQuery = '';
   String _userName = '';
 
-  final List<Map<String, String>> _categories = [
+  final List<Map<String, String>> _categoryFilters = [
     {'label': 'Semua', 'emoji': '🐾'},
+    {'label': 'Hilang', 'emoji': '🔍'},
+    {'label': 'Ditemukan', 'emoji': '📦'},
+    {'label': 'Kecelakaan', 'emoji': '🚨'},
+    {'label': 'Mati', 'emoji': '💀'},
+    {'label': 'Terjebak', 'emoji': '🪤'},
     {'label': 'Sakit', 'emoji': '🩹'},
-    {'label': 'Kelaparan', 'emoji': '🍽️'},
-    {'label': 'Adopsi', 'emoji': '🏠'},
-    {'label': 'Sterilisasi', 'emoji': '✂️'},
+    {'label': 'Lainnya', 'emoji': '📋'},
+  ];
+
+  final List<Map<String, String>> _animalTypeFilters = [
+    {'label': 'Semua', 'emoji': '🐾'},
+    {'label': 'Kucing', 'emoji': '🐱'},
+    {'label': 'Anjing', 'emoji': '🐶'},
+    {'label': 'Burung', 'emoji': '🐦'},
+    {'label': 'Kelinci', 'emoji': '🐰'},
+    {'label': 'Reptil', 'emoji': '🦎'},
+    {'label': 'Lainnya', 'emoji': '🐾'},
   ];
 
   @override
@@ -59,11 +73,35 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Selamat Malam';
   }
 
+  void _toggleCategoryFilter(String category) {
+    setState(() {
+      if (category == 'Semua') {
+        _selectedCategories.clear();
+      } else {
+        if (_selectedCategories.contains(category)) {
+          _selectedCategories.remove(category);
+        } else {
+          _selectedCategories.add(category);
+        }
+      }
+    });
+  }
+
   List<PostModel> _filterPosts(List<PostModel> posts) {
     var filtered = posts;
-    if (_selectedCategory != 'Semua') {
-      filtered = filtered.where((p) => p.category == _selectedCategory).toList();
+
+    // Filter by categories (multi-select): post must have at least one matching category
+    if (_selectedCategories.isNotEmpty) {
+      filtered = filtered.where((p) =>
+          p.categories.any((cat) => _selectedCategories.contains(cat))).toList();
     }
+
+    // Filter by animal type
+    if (_selectedAnimalType != 'Semua') {
+      filtered = filtered.where((p) => p.animalType == _selectedAnimalType).toList();
+    }
+
+    // Filter by search query
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
       filtered = filtered.where((p) =>
@@ -82,7 +120,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           _buildHeader(isDark),
-          _buildCategoryChips(),
+          _buildCategoryChips(isDark),
+          _buildAnimalTypeChips(isDark),
           Expanded(child: _buildPostList(isDark)),
         ],
       ),
@@ -168,23 +207,64 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryChips() {
-    return SizedBox(
-      height: 50,
-      child: ListView.builder(
-        padding: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
-        scrollDirection: Axis.horizontal,
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final cat = _categories[index];
-          return CategoryChip(
-            label: cat['label']!,
-            emoji: cat['emoji']!,
-            isSelected: _selectedCategory == cat['label'],
-            onTap: () => setState(() => _selectedCategory = cat['label']!),
-          );
-        },
-      ),
+  Widget _buildCategoryChips(bool isDark) {
+    final bool isAllSelected = _selectedCategories.isEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 16, top: 8),
+          child: Text('Kategori', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+        ),
+        SizedBox(
+          height: 46,
+          child: ListView.builder(
+            padding: const EdgeInsets.only(left: 16, top: 4, bottom: 4),
+            scrollDirection: Axis.horizontal,
+            itemCount: _categoryFilters.length,
+            itemBuilder: (context, index) {
+              final cat = _categoryFilters[index];
+              final label = cat['label']!;
+              final isSelected = label == 'Semua' ? isAllSelected : _selectedCategories.contains(label);
+              return CategoryChip(
+                label: label,
+                emoji: cat['emoji']!,
+                isSelected: isSelected,
+                onTap: () => _toggleCategoryFilter(label),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnimalTypeChips(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 16, top: 2),
+          child: Text('Jenis Hewan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+        ),
+        SizedBox(
+          height: 46,
+          child: ListView.builder(
+            padding: const EdgeInsets.only(left: 16, top: 4, bottom: 4),
+            scrollDirection: Axis.horizontal,
+            itemCount: _animalTypeFilters.length,
+            itemBuilder: (context, index) {
+              final type = _animalTypeFilters[index];
+              return CategoryChip(
+                label: type['label']!,
+                emoji: type['emoji']!,
+                isSelected: _selectedAnimalType == type['label'],
+                onTap: () => setState(() => _selectedAnimalType = type['label']!),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 

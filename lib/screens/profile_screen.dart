@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:paws_care/main.dart';
@@ -223,40 +223,86 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_user == null) return;
     final nameCtrl = TextEditingController(text: _user!.username);
     final phoneCtrl = TextEditingController(text: _user!.phone);
+    bool isPhoneValid = _user!.phone.isEmpty || (_user!.phone.length >= 12 && _user!.phone.length <= 13);
+    String phoneError = '';
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit Profil'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtrl, decoration: _editDeco('Username')),
-            const SizedBox(height: 12),
-            TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: _editDeco('Nomor Telepon')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await _service.updateUser(_currentUserId, {
-                'username': nameCtrl.text.trim(),
-                'phone': phoneCtrl.text.trim(),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          void validatePhone() {
+            final phone = phoneCtrl.text.trim();
+            if (phone.isEmpty) {
+              setDialogState(() {
+                isPhoneValid = true;
+                phoneError = '';
               });
-              _loadData();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profil diperbarui! ✅'), backgroundColor: Color(0xFF4CAF50)),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF2994A), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            child: const Text('Simpan', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+            } else if (phone.length < 12 || phone.length > 13) {
+              setDialogState(() {
+                isPhoneValid = false;
+                phoneError = 'Nomor telepon harus terdiri dari 12–13 digit angka.';
+              });
+            } else {
+              setDialogState(() {
+                isPhoneValid = true;
+                phoneError = '';
+              });
+            }
+          }
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Edit Profil'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(controller: nameCtrl, decoration: _editDeco('Username')),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(13),
+                  ],
+                  decoration: _editDeco('Nomor Telepon').copyWith(
+                    errorText: phoneError.isNotEmpty ? phoneError : null,
+                    errorMaxLines: 2,
+                    counterText: '${phoneCtrl.text.length}/13',
+                  ),
+                  onChanged: (_) => validatePhone(),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              ElevatedButton(
+                onPressed: isPhoneValid
+                    ? () async {
+                        Navigator.pop(ctx);
+                        await _service.updateUser(_currentUserId, {
+                          'username': nameCtrl.text.trim(),
+                          'phone': phoneCtrl.text.trim(),
+                        });
+                        _loadData();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Profil diperbarui! ✅'), backgroundColor: Color(0xFF4CAF50)),
+                          );
+                        }
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF2994A),
+                  disabledBackgroundColor: Colors.grey[400],
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

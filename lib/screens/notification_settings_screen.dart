@@ -25,6 +25,7 @@ class _NotificationSettingsScreenState
   List<String> _selectedAnimalTypes = [];
   bool _commentOnOwnPost = true;
   bool _commentOnVolunteerPost = true;
+  bool _commentOnFavoritePost = true;
 
   @override
   void initState() {
@@ -58,6 +59,7 @@ class _NotificationSettingsScreenState
 
           _commentOnOwnPost = prefs['commentOnOwnPost'] ?? true;
           _commentOnVolunteerPost = prefs['commentOnVolunteerPost'] ?? true;
+          _commentOnFavoritePost = prefs['commentOnFavoritePost'] ?? true;
           _isLoading = false;
         });
       }
@@ -78,6 +80,7 @@ class _NotificationSettingsScreenState
         'animalTypes': _selectedAnimalTypes,
         'commentOnOwnPost': _commentOnOwnPost,
         'commentOnVolunteerPost': _commentOnVolunteerPost,
+        'commentOnFavoritePost': _commentOnFavoritePost,
       };
 
       await _fcmService.saveNotificationPreferences(
@@ -541,6 +544,16 @@ class _NotificationSettingsScreenState
             value: _commentOnVolunteerPost,
             onChanged: (val) =>
                 setState(() => _commentOnVolunteerPost = val),
+            isDark: isDark,
+          ),
+          const SizedBox(height: 10),
+          _buildCommentToggle(
+            icon: Icons.favorite_border_rounded,
+            title: 'Postingan yang difavoritkan',
+            subtitle: 'Komentar pada laporan yang masuk daftar favorit Anda',
+            value: _commentOnFavoritePost,
+            onChanged: (val) =>
+                setState(() => _commentOnFavoritePost = val),
             isDark: isDark,
           ),
         ],

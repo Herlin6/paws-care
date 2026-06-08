@@ -241,7 +241,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
           topic: 'c_${sanitize(cat)}_a_${sanitize(post.animalType)}',
           title: '📢 Laporan Baru: ${post.title}',
           body: '${post.username} melaporkan ${post.animalType} — $cat',
-          data: {'postId': newPostId},
+          data: {'postId': newPostId, 'senderUid': _currentUserId},
         );
       }
 

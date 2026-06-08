@@ -29,9 +29,14 @@ class _DetailScreenState extends State<DetailScreen> {
   String _currentUsername = '';
   String _currentUserRole = 'Pengguna';
 
+  late Stream<PostModel?> _postStream;
+  late Stream<List<CommentModel>> _commentsStream;
+
   @override
   void initState() {
     super.initState();
+    _postStream = _service.streamPost(widget.postId);
+    _commentsStream = _service.streamComments(widget.postId);
     _loadUserData();
   }
 
@@ -493,7 +498,7 @@ class _DetailScreenState extends State<DetailScreen> {
   // NOTIFICATION HELPERS
   // ============================================================
 
-  /// Kirim notifikasi komentar baru ke pemilik post dan relawan
+  /// Kirim notifikasi komentar baru ke pemilik post, relawan, dan pengguna yang memfavoritkan
   Future<void> _sendCommentNotification() async {
     try {
       final post = await _service.getPost(widget.postId);
@@ -502,7 +507,7 @@ class _DetailScreenState extends State<DetailScreen> {
       final notifApi = NotificationApiService();
       final db = FirebaseFirestore.instance;
 
-      // Kumpulkan semua UID penerima (owner + volunteers), kecuali pengirim
+      // Kumpulkan semua UID penerima, kecuali pengirim
       final recipientUids = <String>{};
       if (post.userId != _currentUserId) {
         recipientUids.add(post.userId);
@@ -512,17 +517,48 @@ class _DetailScreenState extends State<DetailScreen> {
           recipientUids.add(volUid);
         }
       }
+      for (final favUid in post.favoriteBy) {
+        if (favUid != _currentUserId) {
+          recipientUids.add(favUid);
+        }
+      }
 
-      // Ambil token semua penerima dan kirim notifikasi
+      // Ambil preferensi dan kirim notifikasi
       for (final uid in recipientUids) {
         final userDoc = await db.collection('users').doc(uid).get();
-        final token = userDoc.data()?['fcmToken'] as String?;
-        if (token != null && token.isNotEmpty) {
+        final userData = userDoc.data();
+        if (userData == null) continue;
+
+        final token = userData['fcmToken'] as String?;
+        if (token == null || token.isEmpty) continue;
+
+        final prefs = userData['notificationPrefs'] as Map<String, dynamic>? ?? {};
+        final bool enabled = prefs['enabled'] ?? true;
+        if (!enabled) continue; // Skip jika master notifikasi dimatikan
+
+        final bool commentOnOwnPost = prefs['commentOnOwnPost'] ?? true;
+        final bool commentOnVolunteerPost = prefs['commentOnVolunteerPost'] ?? true;
+        final bool commentOnFavoritePost = prefs['commentOnFavoritePost'] ?? true;
+
+        bool shouldSend = false;
+        
+        // Cek izin berdasarkan peran user tersebut pada postingan
+        if (uid == post.userId && commentOnOwnPost) {
+          shouldSend = true;
+        }
+        if (post.handledBy.contains(uid) && commentOnVolunteerPost) {
+          shouldSend = true;
+        }
+        if (post.favoriteBy.contains(uid) && commentOnFavoritePost) {
+          shouldSend = true;
+        }
+
+        if (shouldSend) {
           notifApi.sendNotification(
             token: token,
             title: '💬 Komentar Baru',
             body: '$_currentUsername mengomentari: ${post.title}',
-            data: {'postId': widget.postId},
+            data: {'postId': widget.postId, 'senderUid': _currentUserId},
           );
         }
       }
@@ -574,7 +610,7 @@ class _DetailScreenState extends State<DetailScreen> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFFFF8E7),
       body: StreamBuilder<PostModel?>(
-        stream: _service.streamPost(widget.postId),
+        stream: _postStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Color(0xFFF2994A)));
           final post = snapshot.data;
@@ -950,59 +986,100 @@ class _DetailScreenState extends State<DetailScreen> {
   }
 
   Widget _buildCommentsSection(bool isDark) {
-    return StreamBuilder<List<CommentModel>>(
-      stream: _service.streamComments(widget.postId),
-      builder: (context, snapshot) {
-        final comments = snapshot.data ?? [];
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [Icon(Icons.chat_bubble_outline, size: 18, color: Colors.grey[500]), const SizedBox(width: 6),
-            Text('Komentar (${comments.length})', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15))]),
-          const SizedBox(height: 12),
-          if (comments.isEmpty)
-            Padding(padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: Text('Belum ada komentar', style: TextStyle(color: Colors.grey[400], fontSize: 13))))
-          else
-            ...comments.map((c) {
-              final canDelete = _isAdmin || c.userId == _currentUserId;
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[100]!)),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(child: Text(c.username, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
-                    Text(_timeAgo(c.createdAt), style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-                    if (canDelete) ...[
-                      const SizedBox(width: 8),
-                      GestureDetector(onTap: () => _deleteComment(c),
-                        child: Icon(Icons.delete_outline, size: 16, color: Colors.red[300])),
-                    ],
-                  ]),
-                  const SizedBox(height: 4),
-                  Text(c.text, style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[300] : Colors.grey[700])),
-                ]),
-              );
-            }),
-          const SizedBox(height: 12),
-          // Comment input inline in section
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(children: [
-              Expanded(child: TextField(controller: _commentController,
-                style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
-                decoration: InputDecoration(hintText: 'Tulis komentar...', hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: Colors.grey[300]!)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Color(0xFFF2994A))),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), isDense: true))),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        StreamBuilder<List<CommentModel>>(
+          stream: _commentsStream,
+          builder: (context, snapshot) {
+            final comments = snapshot.data ?? [];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.chat_bubble_outline, size: 18, color: Colors.grey[500]),
+                    const SizedBox(width: 6),
+                    Text('Komentar (${comments.length})', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (comments.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: Text('Belum ada komentar', style: TextStyle(color: Colors.grey[400], fontSize: 13))),
+                  )
+                else
+                  ...comments.map((c) {
+                    final canDelete = _isAdmin || c.userId == _currentUserId;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[100]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: Text(c.username, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+                              Text(_timeAgo(c.createdAt), style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                              if (canDelete) ...[
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: () => _deleteComment(c),
+                                  child: Icon(Icons.delete_outline, size: 16, color: Colors.red[300]),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(c.text, style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[300] : Colors.grey[700])),
+                        ],
+                      ),
+                    );
+                  }),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        // Comment input inline in section
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _commentController,
+                  style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
+                  decoration: InputDecoration(
+                    hintText: 'Tulis komentar...',
+                    hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: Colors.grey[300]!)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Color(0xFFF2994A))),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    isDense: true,
+                  ),
+                ),
+              ),
               const SizedBox(width: 8),
-              GestureDetector(onTap: _sendComment,
-                child: Container(padding: const EdgeInsets.all(10), decoration: const BoxDecoration(color: Color(0xFFF2994A), shape: BoxShape.circle),
-                  child: const Icon(Icons.send, color: Colors.white, size: 20))),
-            ]),
+              GestureDetector(
+                onTap: _sendComment,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(color: Color(0xFFF2994A), shape: BoxShape.circle),
+                  child: const Icon(Icons.send, color: Colors.white, size: 20),
+                ),
+              ),
+            ],
           ),
-        ]);
-      },
+        ),
+      ],
     );
   }
 }

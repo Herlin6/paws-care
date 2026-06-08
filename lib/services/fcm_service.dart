@@ -150,6 +150,7 @@ class FcmService {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      if (message.data['senderUid'] == user.uid) return;
       final prefs = await getNotificationPreferences(user.uid);
       if (prefs['enabled'] != true) return;
     }
@@ -240,6 +241,7 @@ class FcmService {
       'animalTypes': <String>[],
       'commentOnOwnPost': true,
       'commentOnVolunteerPost': true,
+      'commentOnFavoritePost': true,
     };
   }
 

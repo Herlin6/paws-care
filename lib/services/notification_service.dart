@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:paws_care/services/fcm_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -85,12 +86,22 @@ class NotificationService {
             if (change.type == DocumentChangeType.modified) {
               final data = change.doc.data();
               if (data != null) {
-                final status = data['status'] ?? '';
-                final title = data['title'] ?? 'Laporan';
-                showNotification(
-                  title: 'Update Laporan: $title',
-                  body: 'Status laporan Anda berubah menjadi: $status',
-                );
+                // Jangan notifikasi jika yang update adalah pemilik sendiri
+                final updatedByUid = data['updatedByUid'] as String?;
+                if (updatedByUid == user.uid) continue;
+
+                // Cek preferensi notifikasi
+                FcmService().getNotificationPreferences(user.uid).then((prefs) {
+                  final bool enabled = prefs['enabled'] ?? true;
+                  if (!enabled) return;
+
+                  final status = data['status'] ?? '';
+                  final title = data['title'] ?? 'Laporan';
+                  showNotification(
+                    title: 'Update Laporan: $title',
+                    body: 'Status laporan Anda berubah menjadi: $status',
+                  );
+                });
               }
             }
           }

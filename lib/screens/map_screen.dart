@@ -31,7 +31,7 @@ class _MapScreenState extends State<MapScreen> {
     _service.streamPosts().listen((posts) {
       if (!mounted) return;
       final newMarkers = <Marker>{};
-      
+
       for (final post in posts) {
         if (post.latitude != 0 && post.longitude != 0) {
           newMarkers.add(
@@ -50,13 +50,13 @@ class _MapScreenState extends State<MapScreen> {
           );
         }
       }
-      
+
       setState(() {
         _markers.clear();
         _markers.addAll(newMarkers);
         _isLoading = false;
       });
-      
+
       if (newMarkers.isNotEmpty && _mapController != null) {
         _mapController!.animateCamera(
           CameraUpdate.newLatLngZoom(newMarkers.first.position, 12.0),
@@ -67,7 +67,7 @@ class _MapScreenState extends State<MapScreen> {
 
   void _showPostBottomSheet(PostModel post) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -95,7 +95,7 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -111,11 +111,12 @@ class _MapScreenState extends State<MapScreen> {
                               base64Decode(post.imageBase64),
                               fit: BoxFit.cover,
                             )
-                          : const Icon(Icons.pets, color: Colors.grey, size: 30),
+                          : const Icon(Icons.pets,
+                              color: Colors.grey, size: 30),
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Details
                   Expanded(
                     child: Column(
@@ -135,11 +136,13 @@ class _MapScreenState extends State<MapScreen> {
                         // Reporter name
                         Row(
                           children: [
-                            Icon(Icons.person_outline, size: 14, color: Colors.grey[500]),
+                            Icon(Icons.person_outline,
+                                size: 14, color: Colors.grey[500]),
                             const SizedBox(width: 4),
                             Text(
                               post.username,
-                              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[500]),
                             ),
                           ],
                         ),
@@ -151,9 +154,11 @@ class _MapScreenState extends State<MapScreen> {
                           children: [
                             // Animal type badge
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF4CAF50).withValues(alpha: 0.12),
+                                color: const Color(0xFF4CAF50)
+                                    .withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -167,7 +172,8 @@ class _MapScreenState extends State<MapScreen> {
                             ),
                             // Status badge
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: post.status == 'Berhasil Ditangani'
                                     ? Colors.green.withValues(alpha: 0.15)
@@ -202,21 +208,25 @@ class _MapScreenState extends State<MapScreen> {
               Wrap(
                 spacing: 6,
                 runSpacing: 4,
-                children: post.categories.map((cat) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF2994A).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '${PostModel.categoryEmoji(cat)} $cat',
-                    style: const TextStyle(
-                      color: Color(0xFFF2994A),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                )).toList(),
+                children: post.categories
+                    .map((cat) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFF2994A).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${PostModel.categoryEmoji(cat)} $cat',
+                            style: const TextStyle(
+                              color: Color(0xFFF2994A),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ))
+                    .toList(),
               ),
               const SizedBox(height: 12),
 
@@ -232,7 +242,7 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Location Info
               Container(
                 padding: const EdgeInsets.all(12),
@@ -243,17 +253,21 @@ class _MapScreenState extends State<MapScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.location_on, size: 18, color: Color(0xFF4CAF50)),
+                    const Icon(Icons.location_on,
+                        size: 18, color: Color(0xFF4CAF50)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            post.locationText.isNotEmpty ? post.locationText : 'Lokasi GPS tersedia',
+                            post.locationText.isNotEmpty
+                                ? post.locationText
+                                : 'Lokasi GPS tersedia',
                             style: TextStyle(
                               fontSize: 13,
-                              color: isDark ? Colors.grey[300] : Colors.grey[700],
+                              color:
+                                  isDark ? Colors.grey[300] : Colors.grey[700],
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -263,7 +277,9 @@ class _MapScreenState extends State<MapScreen> {
                               post.locationDetail,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
@@ -275,7 +291,7 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // Action Button
               SizedBox(
                 width: double.infinity,
@@ -293,10 +309,12 @@ class _MapScreenState extends State<MapScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFF2994A),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
-                  child: const Text('Lihat Detail Lengkap', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Lihat Detail Lengkap',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(height: 8),
@@ -318,7 +336,8 @@ class _MapScreenState extends State<MapScreen> {
         ]),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFF2994A)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFF2994A)))
           : Stack(
               children: [
                 GoogleMap(
@@ -337,11 +356,14 @@ class _MapScreenState extends State<MapScreen> {
                     left: 16,
                     right: 16,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 16),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
-                        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black26, blurRadius: 6)
+                        ],
                       ),
                       child: const Row(
                         children: [
@@ -350,7 +372,9 @@ class _MapScreenState extends State<MapScreen> {
                           Expanded(
                             child: Text(
                               'Belum ada laporan dengan koordinat GPS.',
-                              style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],

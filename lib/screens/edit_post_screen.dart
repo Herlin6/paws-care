@@ -6,8 +6,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:paws_care/models/post_model.dart';
 import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/services/auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:paws_care/screens/image_crop_screen.dart';
 import 'package:paws_care/widgets/main_scaffold.dart';
+import 'package:paws_care/services/notification_api_service.dart';
 
 class EditPostScreen extends StatefulWidget {
   final PostModel post;
@@ -23,6 +25,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
   late TextEditingController _locationController;
+  late TextEditingController _locationDetailController;
   late List<String> _selectedCategories;
   late String _selectedAnimalType;
   late String _imageBase64;
@@ -38,6 +41,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
     _titleController = TextEditingController(text: widget.post.title);
     _descController = TextEditingController(text: widget.post.description);
     _locationController = TextEditingController(text: widget.post.locationText);
+    _locationDetailController = TextEditingController(text: widget.post.locationDetail);
     _selectedCategories = List<String>.from(widget.post.categories);
     _selectedAnimalType = widget.post.animalType;
     _imageBase64 = widget.post.imageBase64;
@@ -78,6 +82,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
     _titleController.dispose();
     _descController.dispose();
     _locationController.dispose();
+    _locationDetailController.dispose();
     super.dispose();
   }
 
@@ -145,11 +150,35 @@ class _EditPostScreenState extends State<EditPostScreen> {
           'categories': _selectedCategories,
           'animalType': _selectedAnimalType,
           'locationText': _locationController.text.trim(),
+          'locationDetail': _locationDetailController.text.trim(),
           'imageBase64': _imageBase64,
         },
         _currentUserId,
         _currentUserRole,
       );
+
+      // Kirim notifikasi ke relawan bahwa laporan telah diperbarui
+      if (widget.post.handledBy.isNotEmpty) {
+        final notifApi = NotificationApiService();
+        final db = FirebaseFirestore.instance;
+        for (final volUid in widget.post.handledBy) {
+          if (volUid != _currentUserId) {
+            try {
+              final userDoc = await db.collection('users').doc(volUid).get();
+              final token = userDoc.data()?['fcmToken'] as String?;
+              if (token != null && token.isNotEmpty) {
+                notifApi.sendNotification(
+                  token: token,
+                  title: '✏️ Laporan Diperbarui',
+                  body: 'Laporan "${widget.post.title}" telah diperbarui oleh pemilik.',
+                  data: {'postId': widget.post.postId},
+                );
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
       if (mounted) {
         await showDialog(
           context: context,
@@ -296,6 +325,10 @@ class _EditPostScreenState extends State<EditPostScreen> {
             Text('Lokasi', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
             const SizedBox(height: 8),
             TextField(controller: _locationController, style: TextStyle(color: isDark ? Colors.white : Colors.black87), decoration: _inputDeco('Alamat manual...', isDark)),
+            const SizedBox(height: 20),
+            Text('Detail Lokasi', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
+            const SizedBox(height: 8),
+            TextField(controller: _locationDetailController, style: TextStyle(color: isDark ? Colors.white : Colors.black87), decoration: _inputDeco('Patokan, RT/RW, dll (Opsional)...', isDark)),
             const SizedBox(height: 28),
             SizedBox(
               width: double.infinity, height: 50,

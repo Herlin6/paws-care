@@ -11,6 +11,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/services/notification_api_service.dart';
 import 'package:paws_care/screens/edit_post_screen.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class DetailScreen extends StatefulWidget {
   final String postId;
@@ -299,6 +301,194 @@ class _DetailScreenState extends State<DetailScreen> {
     _sendCommentNotification();
   }
 
+  Future<void> _updateLocation(PostModel post) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator(color: Color(0xFFF2994A))),
+    );
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) Navigator.pop(context);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Layanan lokasi tidak aktif')));
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) Navigator.pop(context);
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Izin lokasi ditolak')));
+          return;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) Navigator.pop(context);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Izin lokasi ditolak permanen')));
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition();
+      
+      String newAddress = '';
+      String newDetail = '';
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks[0];
+          newAddress = '${place.street}, ${place.subLocality}, ${place.locality}';
+          newDetail = '${place.administrativeArea}, ${place.country}';
+        }
+      } catch (_) {}
+
+      if (!mounted) return;
+      Navigator.pop(context); // close loading dialog
+
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Pembaruan Lokasi GPS'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Lokasi Lama:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text(post.locationText.isNotEmpty ? post.locationText : 'Belum tersedia', style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                if (post.latitude != 0 && post.longitude != 0)
+                  Text('${post.latitude.toStringAsFixed(6)}, ${post.longitude.toStringAsFixed(6)}', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                const SizedBox(height: 12),
+                const Text('Lokasi Baru:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text(newAddress.isNotEmpty ? newAddress : 'Lokasi GPS tersedia', style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                Text('${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                const SizedBox(height: 16),
+                const Text('Gunakan lokasi ini?'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF2994A),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Konfirmasi', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await _service.updatePost(post.postId, {
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'locationText': newAddress,
+          'locationDetail': newDetail,
+        });
+
+        if (post.handledBy.isNotEmpty) {
+          final notifApi = NotificationApiService();
+          final db = FirebaseFirestore.instance;
+          for (final volUid in post.handledBy) {
+            if (volUid != _currentUserId) {
+              try {
+                final userDoc = await db.collection('users').doc(volUid).get();
+                final token = userDoc.data()?['fcmToken'] as String?;
+                if (token != null && token.isNotEmpty) {
+                  notifApi.sendNotification(
+                    token: token,
+                    title: '📍 Lokasi Diperbarui',
+                    body: 'Lokasi laporan "${post.title}" telah diperbarui oleh pemilik.',
+                    data: {'postId': post.postId},
+                  );
+                }
+              } catch (_) {}
+            }
+          }
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Lokasi berhasil diperbarui'), backgroundColor: Color(0xFF4CAF50)),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // close loading if error
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memperbarui: $e')));
+      }
+    }
+  }
+
+  Future<void> _removeLocation(PostModel post) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hapus Lokasi GPS?'),
+        content: const Text('Apakah Anda yakin ingin menghapus data koordinat GPS dari laporan ini? (Teks alamat akan tetap dipertahankan)'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await _service.updatePost(post.postId, {
+          'latitude': 0.0,
+          'longitude': 0.0,
+        });
+
+        if (post.handledBy.isNotEmpty) {
+          final notifApi = NotificationApiService();
+          final db = FirebaseFirestore.instance;
+          for (final volUid in post.handledBy) {
+            if (volUid != _currentUserId) {
+              try {
+                final userDoc = await db.collection('users').doc(volUid).get();
+                final token = userDoc.data()?['fcmToken'] as String?;
+                if (token != null && token.isNotEmpty) {
+                  notifApi.sendNotification(
+                    token: token,
+                    title: '📍 Lokasi Diperbarui',
+                    body: 'Lokasi GPS laporan "${post.title}" telah dihapus oleh pemilik.',
+                    data: {'postId': post.postId},
+                  );
+                }
+              } catch (_) {}
+            }
+          }
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Lokasi GPS berhasil dihapus'), backgroundColor: Colors.red),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menghapus: $e')));
+        }
+      }
+    }
+  }
+
   // ============================================================
   // NOTIFICATION HELPERS
   // ============================================================
@@ -475,6 +665,41 @@ class _DetailScreenState extends State<DetailScreen> {
           const SizedBox(height: 16),
           // Location (Clickable - opens Google Maps)
           _buildLocationCard(post, isDark),
+          if (isOwner && !isCompleted) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _updateLocation(post),
+                icon: const Icon(Icons.gps_fixed, size: 18),
+                label: Text((post.latitude != 0 && post.longitude != 0) ? 'Perbarui Lokasi GPS' : 'Gunakan Lokasi GPS Saat Ini', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF2994A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+            if (post.latitude != 0 && post.longitude != 0) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _removeLocation(post),
+                  icon: const Icon(Icons.location_off, size: 18),
+                  label: const Text('Hapus Lokasi GPS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
+          ],
           const SizedBox(height: 16),
           // Volunteer slots
           Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: isDark ? const Color(0xFF2C2C2C) : Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!)),
@@ -589,31 +814,26 @@ class _DetailScreenState extends State<DetailScreen> {
   Widget _buildLocationCard(PostModel post, bool isDark) {
     final hasCoords = post.latitude != 0 && post.longitude != 0;
     final hasText = post.locationText.isNotEmpty;
-    final canOpenMaps = hasCoords || hasText;
 
     Future<void> openMaps() async {
-      Uri url;
-      if (hasCoords) {
-        url = Uri.parse(
-            'https://www.google.com/maps/search/?api=1&query=${post.latitude},${post.longitude}');
-      } else {
-        url = Uri.parse(
-            'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(post.locationText)}');
-      }
+      // Hanya buka Google Maps jika ada koordinat GPS valid
+      if (!hasCoords) return;
+      final url = Uri.parse(
+          'https://www.google.com/maps/search/?api=1&query=${post.latitude},${post.longitude}');
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);
       }
     }
 
     return GestureDetector(
-      onTap: canOpenMaps ? openMaps : null,
+      onTap: hasCoords ? openMaps : null,
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: canOpenMaps
+              color: hasCoords
                   ? const Color(0xFF4CAF50).withValues(alpha: 0.4)
                   : isDark
                       ? Colors.grey[800]!
@@ -639,7 +859,11 @@ class _DetailScreenState extends State<DetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        hasText ? post.locationText : (hasCoords ? 'Lokasi GPS tersedia' : 'Lokasi belum tersedia'),
+                        hasText
+                            ? post.locationText
+                            : (hasCoords
+                                ? 'Lokasi GPS tersedia'
+                                : 'Lokasi belum tersedia'),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -666,6 +890,7 @@ class _DetailScreenState extends State<DetailScreen> {
                           ],
                         ),
                       ],
+                      // Koordinat GPS hanya ditampilkan jika ada lat/lng valid
                       if (hasCoords) ...[
                         const SizedBox(height: 4),
                         Text(
@@ -677,7 +902,8 @@ class _DetailScreenState extends State<DetailScreen> {
                     ],
                   ),
                 ),
-                if (canOpenMaps)
+                // Ikon buka maps hanya muncul jika ada koordinat GPS
+                if (hasCoords)
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
@@ -689,7 +915,8 @@ class _DetailScreenState extends State<DetailScreen> {
                   ),
               ],
             ),
-            if (canOpenMaps) ...[
+            // Tombol "Buka di Google Maps" hanya muncul jika ada koordinat GPS
+            if (hasCoords) ...[
               const SizedBox(height: 10),
               Container(
                 width: double.infinity,
@@ -699,16 +926,14 @@ class _DetailScreenState extends State<DetailScreen> {
                   color: const Color(0xFF4CAF50).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.map, size: 16, color: Color(0xFF4CAF50)),
-                    const SizedBox(width: 6),
+                    Icon(Icons.map, size: 16, color: Color(0xFF4CAF50)),
+                    SizedBox(width: 6),
                     Text(
-                      hasCoords
-                          ? 'Buka di Google Maps (GPS)'
-                          : 'Buka di Google Maps (Alamat)',
-                      style: const TextStyle(
+                      'Buka di Google Maps',
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF4CAF50),

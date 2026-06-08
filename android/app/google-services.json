@@ -13,7 +13,20 @@
           "package_name": "com.example.paws_care"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "189274994253-rpunj8mhs1olroggrgf48umaa7bnknic.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.paws_care",
+            "certificate_hash": "15ba19cf693f2cd833551b9c9e89491b961a5618"
+          }
+        },
+        {
+          "client_id": "189274994253-57cruffs5l1ugfjne7djvha1prlp94vv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBhATgJWdIubisZttOY4NkN9mSyrltoUnk"
@@ -21,7 +34,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "189274994253-57cruffs5l1ugfjne7djvha1prlp94vv.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "189274994253-b67ui6qt1p8empu1ck0te0uq3bfrhc3t.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pawsCare"
+              }
+            }
+          ]
         }
       }
     }

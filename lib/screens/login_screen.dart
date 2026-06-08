@@ -70,6 +70,33 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final user = await _authService.loginWithGoogle();
+
+      if (user != null && mounted) {
+        final fcmService = FcmService();
+        await fcmService.saveTokenForUser(user.uid);
+        await fcmService.syncPreferencesForUser(user.uid);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScaffold()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnack('Login Google gagal: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: Colors.red[400]),
@@ -218,7 +245,36 @@ class _LoginScreenState extends State<LoginScreen> {
                               : const Text('Masuk', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ),
+                      
                       const SizedBox(height: 16),
+
+                      Row(
+                        children: [
+                          Expanded(child: Divider()),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('atau'),
+                          ),
+                          Expanded(child: Divider()),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: _isLoading ? null : _loginWithGoogle,
+                          icon: const Icon(Icons.login),
+                          label: const Text('Masuk dengan Google'),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

@@ -60,17 +60,25 @@ class AuthService {
     }
   }
 
-  /// Login with Google
+  /// Login with Google (google_sign_in v7.x API)
+  /// GoogleSignIn.instance.initialize() harus sudah dipanggil di main.dart
   Future<User?> loginWithGoogle() async {
     try {
+      // authenticate() menggunakan v7 API — akan throw jika user cancel
       final GoogleSignInAccount googleUser =
           await GoogleSignIn.instance.authenticate();
 
       final GoogleSignInAuthentication googleAuth =
           googleUser.authentication;
 
+      // Pastikan idToken tersedia sebelum membuat credential
+      final String? idToken = googleAuth.idToken;
+      if (idToken == null) {
+        throw Exception('Gagal mendapatkan idToken dari Google Sign-In.');
+      }
+
       final credential = GoogleAuthProvider.credential(
-        idToken: googleAuth.idToken,
+        idToken: idToken,
       );
 
       final userCredential =
@@ -101,6 +109,12 @@ class AuthService {
       }
 
       return user;
+    } on GoogleSignInException catch (e) {
+      // User membatalkan sign-in atau error konfigurasi
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        return null; // User cancel — bukan error
+      }
+      rethrow; // Error lain tetap di-throw
     } catch (e) {
       rethrow;
     }
@@ -112,6 +126,13 @@ class AuthService {
 
     if (user != null) {
       await FcmService().clearTokenForUser(user.uid);
+    }
+
+    // Sign out dari Google jika sebelumnya login via Google
+    try {
+      await GoogleSignIn.instance.disconnect();
+    } catch (_) {
+      // Abaikan jika tidak login via Google
     }
 
     await _auth.signOut();

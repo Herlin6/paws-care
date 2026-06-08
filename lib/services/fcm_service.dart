@@ -141,12 +141,18 @@ class FcmService {
   }
 
   /// Handle foreground FCM message — show local notification
-  void _handleForegroundMessage(RemoteMessage message) {
+  void _handleForegroundMessage(RemoteMessage message) async {
     final notification = message.notification;
     if (notification == null) return;
 
     // On Web, the browser handles foreground notifications natively.
     if (kIsWeb) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final prefs = await getNotificationPreferences(user.uid);
+      if (prefs['enabled'] != true) return;
+    }
 
     _localNotifications.show(
       DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -251,6 +257,21 @@ class FcmService {
     // Use PostModel as single source of truth
     final allCategories = PostModel.availableCategories;
     final allAnimalTypes = PostModel.availableAnimalTypes;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      if (enabled) {
+        if (_currentToken != null) {
+          await _db.collection('users').doc(user.uid).update({
+            'fcmToken': _currentToken,
+          }).catchError((_) {});
+        }
+      } else {
+        await _db.collection('users').doc(user.uid).update({
+          'fcmToken': '',
+        }).catchError((_) {});
+      }
+    }
 
     if (!enabled) {
       // Unsubscribe from all topics

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'firebase_options.dart';
 import 'package:paws_care/screens/splash_screen.dart';
 import 'package:paws_care/services/auth_service.dart';
@@ -15,6 +16,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Inisialisasi Google Sign-In dengan serverClientId (Web Client ID)
+  // Wajib untuk google_sign_in v7.x di Android
+  GoogleSignIn.instance.initialize(
+    serverClientId: '189274994253-57cruffs5l1ugfjne7djvha1prlp94vv.apps.googleusercontent.com',
   );
 
   // Register background message handler

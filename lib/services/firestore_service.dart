@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:paws_care/models/post_model.dart';
 import 'package:paws_care/models/comment_model.dart';
 import 'package:paws_care/models/user_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -28,6 +29,10 @@ class FirestoreService {
   }
 
   Future<void> updatePost(String postId, Map<String, dynamic> data) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      data['updatedByUid'] = uid;
+    }
     await _db.collection('posts').doc(postId).update(data);
   }
 
@@ -60,6 +65,7 @@ class FirestoreService {
           'Forbidden: Anda tidak memiliki izin untuk mengedit postingan ini');
     }
 
+    data['updatedByUid'] = currentUserId;
     await _db.collection('posts').doc(postId).update(data);
   }
 

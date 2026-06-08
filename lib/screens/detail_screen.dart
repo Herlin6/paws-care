@@ -423,12 +423,14 @@ class _DetailScreenState extends State<DetailScreen> {
       body: StreamBuilder<PostModel?>(
         stream: _service.streamPost(widget.postId),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
                 child: CircularProgressIndicator(color: Color(0xFFF2994A)));
+          }
           final post = snapshot.data;
-          if (post == null)
+          if (post == null) {
             return const Center(child: Text('Post tidak ditemukan'));
+          }
           return Stack(
             children: [
               _buildContent(post, isDark),

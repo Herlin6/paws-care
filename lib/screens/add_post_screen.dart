@@ -232,23 +232,18 @@ class _AddPostScreenState extends State<AddPostScreen> {
     try {
       final newPostId = await _service.addPost(post);
 
-      // Kirim notifikasi ke topic berdasarkan kategori & jenis hewan
+      // Kirim notifikasi ke topic berdasarkan kombinasi kategori & jenis hewan (AND logic)
       final notifApi = NotificationApiService();
       String sanitize(String s) => s.toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-zA-Z0-9\-_.~%]'), '');
+      
       for (final cat in post.categories) {
         notifApi.sendToTopic(
-          topic: 'category_${sanitize(cat)}',
+          topic: 'c_${sanitize(cat)}_a_${sanitize(post.animalType)}',
           title: '📢 Laporan Baru: ${post.title}',
           body: '${post.username} melaporkan ${post.animalType} — $cat',
           data: {'postId': newPostId},
         );
       }
-      notifApi.sendToTopic(
-        topic: 'animal_${sanitize(post.animalType)}',
-        title: '📢 Laporan Baru: ${post.title}',
-        body: '${post.username} melaporkan ${post.animalType}',
-        data: {'postId': newPostId},
-      );
 
       if (mounted) {
         _titleController.clear();

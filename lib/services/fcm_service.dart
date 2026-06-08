@@ -273,42 +273,42 @@ class FcmService {
       }
     }
 
-    if (!enabled) {
-      // Unsubscribe from all topics
-      for (final cat in allCategories) {
-        await unsubscribeFromTopic('category_$cat');
-      }
-      for (final type in allAnimalTypes) {
-        await unsubscribeFromTopic('animal_$type');
-      }
-      return;
+    // Unsubscribe from legacy topics for backward compatibility
+    final unsubFutures = <Future>[];
+    for (final cat in allCategories) {
+      unsubFutures.add(unsubscribeFromTopic('category_$cat'));
+    }
+    for (final type in allAnimalTypes) {
+      unsubFutures.add(unsubscribeFromTopic('animal_$type'));
     }
 
-    if (receiveAll) {
-      // Subscribe to all topics
-      for (final cat in allCategories) {
-        await subscribeToTopic('category_$cat');
-      }
+    // Unsubscribe from all composite topics first to ensure clean state
+    for (final cat in allCategories) {
       for (final type in allAnimalTypes) {
-        await subscribeToTopic('animal_$type');
-      }
-    } else {
-      // Subscribe/unsubscribe based on selections
-      for (final cat in allCategories) {
-        if (categories.contains(cat)) {
-          await subscribeToTopic('category_$cat');
-        } else {
-          await unsubscribeFromTopic('category_$cat');
-        }
-      }
-      for (final type in allAnimalTypes) {
-        if (animalTypes.contains(type)) {
-          await subscribeToTopic('animal_$type');
-        } else {
-          await unsubscribeFromTopic('animal_$type');
-        }
+        unsubFutures.add(unsubscribeFromTopic('c_${cat}_a_${type}'));
       }
     }
+    await Future.wait(unsubFutures);
+
+    if (!enabled) return;
+
+    final catsToSubscribe = categories.contains('Semua') || receiveAll
+        ? allCategories
+        : categories;
+    final typesToSubscribe = animalTypes.contains('Semua') || receiveAll
+        ? allAnimalTypes
+        : animalTypes;
+
+    // Subscribe to the selected combinations (AND logic)
+    final subFutures = <Future>[];
+    for (final cat in catsToSubscribe) {
+      if (!allCategories.contains(cat)) continue;
+      for (final type in typesToSubscribe) {
+        if (!allAnimalTypes.contains(type)) continue;
+        subFutures.add(subscribeToTopic('c_${cat}_a_${type}'));
+      }
+    }
+    await Future.wait(subFutures);
   }
 
   /// Sync preferences for a user after login.

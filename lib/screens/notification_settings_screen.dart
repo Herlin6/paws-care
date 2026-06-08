@@ -21,7 +21,6 @@ class _NotificationSettingsScreenState
 
   // Preferences
   bool _enabled = true;
-  bool _receiveAll = true;
   List<String> _selectedCategories = [];
   List<String> _selectedAnimalTypes = [];
   bool _commentOnOwnPost = true;
@@ -41,11 +40,22 @@ class _NotificationSettingsScreenState
       if (mounted) {
         setState(() {
           _enabled = prefs['enabled'] ?? true;
-          _receiveAll = prefs['receiveAll'] ?? true;
-          _selectedCategories =
-              List<String>.from(prefs['categories'] ?? []);
-          _selectedAnimalTypes =
-              List<String>.from(prefs['animalTypes'] ?? []);
+          
+          final receiveAll = prefs['receiveAll'] == true;
+          final cats = List<String>.from(prefs['categories'] ?? []);
+          if (cats.contains('Semua') || receiveAll) {
+            _selectedCategories = List<String>.from(PostModel.availableCategories);
+          } else {
+            _selectedCategories = cats;
+          }
+
+          final types = List<String>.from(prefs['animalTypes'] ?? []);
+          if (types.contains('Semua') || receiveAll) {
+            _selectedAnimalTypes = List<String>.from(PostModel.availableAnimalTypes);
+          } else {
+            _selectedAnimalTypes = types;
+          }
+
           _commentOnOwnPost = prefs['commentOnOwnPost'] ?? true;
           _commentOnVolunteerPost = prefs['commentOnVolunteerPost'] ?? true;
           _isLoading = false;
@@ -63,7 +73,7 @@ class _NotificationSettingsScreenState
     try {
       final prefs = {
         'enabled': _enabled,
-        'receiveAll': _receiveAll,
+        'receiveAll': false,
         'categories': _selectedCategories,
         'animalTypes': _selectedAnimalTypes,
         'commentOnOwnPost': _commentOnOwnPost,
@@ -100,6 +110,32 @@ class _NotificationSettingsScreenState
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  bool get _isAllCategoriesSelected =>
+      _selectedCategories.length == PostModel.availableCategories.length;
+
+  bool get _isAllAnimalTypesSelected =>
+      _selectedAnimalTypes.length == PostModel.availableAnimalTypes.length;
+
+  void _toggleAllCategories(bool value) {
+    setState(() {
+      if (value) {
+        _selectedCategories = List<String>.from(PostModel.availableCategories);
+      } else {
+        _selectedCategories.clear();
+      }
+    });
+  }
+
+  void _toggleAllAnimalTypes(bool value) {
+    setState(() {
+      if (value) {
+        _selectedAnimalTypes = List<String>.from(PostModel.availableAnimalTypes);
+      } else {
+        _selectedAnimalTypes.clear();
+      }
+    });
   }
 
   void _toggleCategory(String category) {
@@ -157,20 +193,14 @@ class _NotificationSettingsScreenState
                         const SizedBox(height: 16),
 
                         if (_enabled) ...[
-                          // Receive all toggle
-                          _buildReceiveAllToggle(isDark),
+                          // Category selection
+                          _buildCategorySection(isDark),
                           const SizedBox(height: 16),
 
-                          if (!_receiveAll) ...[
-                            // Category selection
-                            _buildCategorySection(isDark),
-                            const SizedBox(height: 16),
-
-                            // Animal type selection
-                            _buildAnimalTypeSection(isDark),
-                            const SizedBox(height: 16),
-                          ],
-
+                          // Animal type selection
+                          _buildAnimalTypeSection(isDark),
+                          const SizedBox(height: 16),
+                          
                           // Comment notifications
                           _buildCommentSection(isDark),
                         ],
@@ -252,113 +282,7 @@ class _NotificationSettingsScreenState
     );
   }
 
-  Widget _buildReceiveAllToggle(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.tune_rounded,
-                  color: const Color(0xFFF2994A), size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Filter Notifikasi',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildRadioTile(
-            title: 'Terima semua notifikasi',
-            subtitle: 'Dapatkan semua notifikasi tanpa filter',
-            value: true,
-            groupValue: _receiveAll,
-            onChanged: (val) => setState(() => _receiveAll = val!),
-            isDark: isDark,
-          ),
-          const SizedBox(height: 8),
-          _buildRadioTile(
-            title: 'Hanya notifikasi tertentu',
-            subtitle: 'Pilih kategori dan jenis hewan',
-            value: false,
-            groupValue: _receiveAll,
-            onChanged: (val) => setState(() => _receiveAll = val!),
-            isDark: isDark,
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildRadioTile({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required bool groupValue,
-    required ValueChanged<bool?> onChanged,
-    required bool isDark,
-  }) {
-    final isSelected = value == groupValue;
-    return GestureDetector(
-      onTap: () => onChanged(value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFFF2994A).withValues(alpha: 0.06)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFFF2994A).withValues(alpha: 0.3)
-                : isDark
-                    ? Colors.grey[700]!
-                    : Colors.grey[200]!,
-          ),
-        ),
-        child: Row(
-          children: [
-            Radio<bool>(
-              value: value,
-              groupValue: groupValue,
-              onChanged: onChanged,
-              activeColor: const Color(0xFFF2994A),
-              visualDensity: VisualDensity.compact,
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black87,
-                      )),
-                  Text(subtitle,
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildCategorySection(bool isDark) {
     return Container(
@@ -377,22 +301,33 @@ class _NotificationSettingsScreenState
             children: [
               const Text('📋', style: TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
-              Text(
-                'Kategori',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black87,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Semua Kategori',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      '${_selectedCategories.length} dipilih',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    ),
+                  ],
                 ),
               ),
-              const Spacer(),
-              Text(
-                '${_selectedCategories.length} dipilih',
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              Switch(
+                value: _isAllCategoriesSelected,
+                onChanged: _toggleAllCategories,
+                activeTrackColor: const Color(0xFFF2994A),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             'Pilih kategori laporan yang ingin diterima notifikasinya',
             style: TextStyle(fontSize: 12, color: Colors.grey[500]),
@@ -403,6 +338,7 @@ class _NotificationSettingsScreenState
             runSpacing: 8,
             children: PostModel.availableCategories.map((cat) {
               final isSelected = _selectedCategories.contains(cat);
+              final icon = PostModel.categoryEmoji(cat);
               return GestureDetector(
                 onTap: () => _toggleCategory(cat),
                 child: AnimatedContainer(
@@ -422,23 +358,17 @@ class _NotificationSettingsScreenState
                           : isDark
                               ? Colors.grey[700]!
                               : Colors.grey[300]!,
-                      width: isSelected ? 1.5 : 1,
+                      width: 1.5,
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isSelected) ...[
-                        const Icon(Icons.check_circle_rounded,
-                            size: 16, color: Color(0xFFF2994A)),
-                        const SizedBox(width: 6),
-                      ],
                       Text(
-                        '${PostModel.categoryEmoji(cat)} $cat',
+                        '$icon $cat',
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                           color: isSelected
                               ? const Color(0xFFF2994A)
                               : isDark
@@ -474,22 +404,33 @@ class _NotificationSettingsScreenState
             children: [
               const Text('🐾', style: TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
-              Text(
-                'Jenis Hewan',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black87,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Semua Jenis Hewan',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      '${_selectedAnimalTypes.length} dipilih',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    ),
+                  ],
                 ),
               ),
-              const Spacer(),
-              Text(
-                '${_selectedAnimalTypes.length} dipilih',
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              Switch(
+                value: _isAllAnimalTypesSelected,
+                onChanged: _toggleAllAnimalTypes,
+                activeTrackColor: const Color(0xFF4CAF50),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             'Pilih jenis hewan yang ingin diterima notifikasinya',
             style: TextStyle(fontSize: 12, color: Colors.grey[500]),
@@ -500,6 +441,7 @@ class _NotificationSettingsScreenState
             runSpacing: 8,
             children: PostModel.availableAnimalTypes.map((type) {
               final isSelected = _selectedAnimalTypes.contains(type);
+              final icon = PostModel.animalTypeEmoji(type);
               return GestureDetector(
                 onTap: () => _toggleAnimalType(type),
                 child: AnimatedContainer(
@@ -519,23 +461,17 @@ class _NotificationSettingsScreenState
                           : isDark
                               ? Colors.grey[700]!
                               : Colors.grey[300]!,
-                      width: isSelected ? 1.5 : 1,
+                      width: 1.5,
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isSelected) ...[
-                        const Icon(Icons.check_circle_rounded,
-                            size: 16, color: Color(0xFF4CAF50)),
-                        const SizedBox(width: 6),
-                      ],
                       Text(
-                        '${PostModel.animalTypeEmoji(type)} $type',
+                        '$icon $type',
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                           color: isSelected
                               ? const Color(0xFF4CAF50)
                               : isDark

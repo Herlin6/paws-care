@@ -170,6 +170,43 @@ class FirestoreService {
     });
   }
 
+  Future<void> submitCompletionRequest({
+    required String postId,
+    required String uid,
+    required String proofBase64,
+    String note = '',
+  }) async {
+    await _db.collection('posts').doc(postId).update({
+      'status': 'Menunggu Konfirmasi Penyelesaian',
+      'completionProofBase64': proofBase64,
+      'completionNote': note,
+      'completedByUid': uid,
+      'completionRequestedAt': FieldValue.serverTimestamp(),
+      'rejectionReason': '',
+    });
+  }
+
+  Future<void> approveCompletion(String postId) async {
+    await _db.collection('posts').doc(postId).update({
+      'status': 'Berhasil Ditangani',
+    });
+  }
+
+  Future<void> rejectCompletion({
+    required String postId,
+    String reason = '',
+  }) async {
+    await _db.collection('posts').doc(postId).update({
+      'status': 'Sedang Ditangani',
+      'rejectionReason': reason,
+      // Hapus data pengajuan agar bisa mengajukan ulang
+      'completionProofBase64': FieldValue.delete(),
+      'completionNote': FieldValue.delete(),
+      'completedByUid': FieldValue.delete(),
+      'completionRequestedAt': FieldValue.delete(),
+    });
+  }
+
   // ============================================================
   // COMMENTS
   // ============================================================

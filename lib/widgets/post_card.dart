@@ -25,6 +25,7 @@ class PostCard extends StatelessWidget {
       case 'Butuh Bantuan': return const Color(0xFFE53935);
       case 'Sedang Ditangani': return const Color(0xFFF2994A);
       case 'Berhasil Ditangani': return const Color(0xFF4CAF50);
+      case 'Menunggu Konfirmasi Penyelesaian': return Colors.blueAccent;
       default: return Colors.grey;
     }
   }
@@ -43,6 +44,11 @@ class PostCard extends StatelessWidget {
     final isFavorite = post.favoriteBy.contains(currentUserId);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final slotCount = post.handledBy.length;
+
+    // Debug sementara untuk melacak data lokasi
+    if (post.locationText.isEmpty && (post.latitude != 0 || post.longitude != 0)) {
+      debugPrint('[DEBUG] HomeCard Location - ID: ${post.postId}, locationText Kosong. Menggunakan koordinat: Lat: ${post.latitude}, Lng: ${post.longitude}');
+    }
 
     return GestureDetector(
       onTap: onTap,
@@ -217,7 +223,11 @@ class PostCard extends StatelessWidget {
                       const SizedBox(width: 3),
                       Expanded(
                         child: Text(
-                          post.locationText.isNotEmpty ? post.locationText : 'Lokasi tidak tersedia',
+                          post.locationText.isNotEmpty 
+                              ? post.locationText 
+                              : ((post.latitude != 0 && post.longitude != 0) 
+                                  ? 'Lokasi GPS tersedia' 
+                                  : 'Lokasi tidak tersedia'),
                           style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[500] : Colors.grey[400]),
                           maxLines: 1, overflow: TextOverflow.ellipsis),
                       ),

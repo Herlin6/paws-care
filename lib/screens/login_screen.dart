@@ -128,17 +128,10 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 80),
                 // Logo
-                const Icon(Icons.pets, size: 56, color: Color(0xFFF2994A)),
-                const SizedBox(height: 16),
-                RichText(
-                  text: TextSpan(
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                    children: [
-                      TextSpan(text: 'Paws ', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF333333))),
-                      const TextSpan(text: '& ', style: TextStyle(color: Color(0xFFF2994A))),
-                      TextSpan(text: 'Care', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF333333))),
-                    ],
-                  ),
+                Image.asset(
+                  'assets/images/logo.png',
+                  height: 140,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 8),
                 Text(

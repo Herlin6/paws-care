@@ -1,15 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:paws_care/widgets/image_source_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:paws_care/models/post_model.dart';
 import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:paws_care/screens/image_crop_screen.dart';
 import 'package:paws_care/widgets/main_scaffold.dart';
 import 'package:paws_care/services/notification_api_service.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 class EditPostScreen extends StatefulWidget {
   final PostModel post;
@@ -28,9 +28,9 @@ class _EditPostScreenState extends State<EditPostScreen> {
   late TextEditingController _locationDetailController;
   late List<String> _selectedCategories;
   late String _selectedAnimalType;
-  late String _imageBase64;
+  String _imageBase64 = '';
   Uint8List? _imageBytes;
-  Uint8List? _originalImageBytes;
+  String? _originalImagePath;
   bool _isLoading = false;
   String _currentUserRole = 'Pengguna';
   String _currentUserId = '';
@@ -49,7 +49,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
     if (_imageBase64.isNotEmpty) {
       try {
         _imageBytes = base64Decode(_imageBase64);
-        _originalImageBytes = _imageBytes;
+        // Can't set original path for existing base64, so recrop from network isn't supported without path
       } catch (_) {}
     }
     _loadCurrentUserRole();
@@ -87,35 +87,48 @@ class _EditPostScreenState extends State<EditPostScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 50);
+    final picked = await ImageSourcePicker.pickImage(
+      context,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 50,
+    );
     if (picked != null && mounted) {
-      final bytes = await picked.readAsBytes();
-      _originalImageBytes = bytes;
-      if (!mounted) return;
-      final croppedBytes = await Navigator.push<Uint8List>(
-        context,
-        MaterialPageRoute(builder: (_) => ImageCropScreen(imageBytes: bytes)),
-      );
-      if (croppedBytes != null && mounted) {
-        setState(() {
-          _imageBytes = croppedBytes;
-          _imageBase64 = base64Encode(croppedBytes);
-        });
-      }
+      _originalImagePath = picked.path;
+      _cropImage(picked.path);
     }
   }
 
   Future<void> _reCropImage() async {
-    if (_originalImageBytes == null) return;
-    final croppedBytes = await Navigator.push<Uint8List>(
-      context,
-      MaterialPageRoute(builder: (_) => ImageCropScreen(imageBytes: _originalImageBytes!)),
+    if (_originalImagePath != null) {
+      _cropImage(_originalImagePath!);
+    } else {
+      // Jika gambar berasal dari network/base64 yang lama, kita harus suruh user pilih ulang
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih ulang foto untuk melakukan crop!')));
+    }
+  }
+
+  Future<void> _cropImage(String path) async {
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: path,
+      uiSettings: [
+        AndroidUiSettings(
+            toolbarTitle: 'Crop Foto',
+            toolbarColor: Colors.black,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false),
+        IOSUiSettings(
+          title: 'Crop Foto',
+        ),
+      ],
     );
-    if (croppedBytes != null && mounted) {
+
+    if (croppedFile != null && mounted) {
+      final bytes = await croppedFile.readAsBytes();
       setState(() {
-        _imageBytes = croppedBytes;
-        _imageBase64 = base64Encode(croppedBytes);
+        _imageBytes = bytes;
+        _imageBase64 = base64Encode(bytes);
       });
     }
   }

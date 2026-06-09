@@ -20,6 +20,8 @@ class PostModel {
   final String completionProofBase64;
   final String completionNote;
   final String completedByUid;
+  final DateTime? completionRequestedAt;
+  final String rejectionReason;
 
   PostModel({
     required this.postId,
@@ -41,6 +43,8 @@ class PostModel {
     this.completionProofBase64 = '',
     this.completionNote = '',
     this.completedByUid = '',
+    this.completionRequestedAt,
+    this.rejectionReason = '',
   });
 
   /// Daftar kategori yang tersedia
@@ -127,6 +131,8 @@ class PostModel {
       'completionProofBase64': completionProofBase64,
       'completionNote': completionNote,
       'completedByUid': completedByUid,
+      'completionRequestedAt': completionRequestedAt != null ? Timestamp.fromDate(completionRequestedAt!) : null,
+      'rejectionReason': rejectionReason,
     };
   }
 
@@ -165,6 +171,10 @@ class PostModel {
       completionProofBase64: map['completionProofBase64'] ?? '',
       completionNote: map['completionNote'] ?? '',
       completedByUid: map['completedByUid'] ?? '',
+      completionRequestedAt: map['completionRequestedAt'] != null
+          ? (map['completionRequestedAt'] as Timestamp).toDate()
+          : null,
+      rejectionReason: map['rejectionReason'] ?? '',
     );
   }
 
@@ -188,6 +198,8 @@ class PostModel {
     String? completionProofBase64,
     String? completionNote,
     String? completedByUid,
+    DateTime? completionRequestedAt,
+    String? rejectionReason,
   }) {
     return PostModel(
       postId: postId ?? this.postId,
@@ -210,6 +222,8 @@ class PostModel {
           completionProofBase64 ?? this.completionProofBase64,
       completionNote: completionNote ?? this.completionNote,
       completedByUid: completedByUid ?? this.completedByUid,
+      completionRequestedAt: completionRequestedAt ?? this.completionRequestedAt,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
     );
   }
 }

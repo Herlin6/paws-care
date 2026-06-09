@@ -127,6 +127,8 @@ class _MapScreenState extends State<MapScreen> {
       return true;
     }).toList();
 
+    debugPrint('[MAP DEBUG] _applyFiltersAndDrawMarkers() dipanggil. Total post awal: ${_allPosts.length}, setelah filter: ${filteredPosts.length}');
+
     final newMarkers = <Marker>{};
 
     for (final post in filteredPosts) {
@@ -154,6 +156,7 @@ class _MapScreenState extends State<MapScreen> {
           onTap: () => _showPostBottomSheet(post),
         ),
       );
+      debugPrint('[MAP DEBUG] Marker dibuat -> ID: ${post.postId}, Posisi: ${post.latitude}, ${post.longitude}');
     }
 
     if (mounted) {
@@ -371,12 +374,20 @@ class _MapScreenState extends State<MapScreen> {
           // 1. Peta Utama
           GoogleMap(
             onMapCreated: (controller) {
+              debugPrint('[MAP DEBUG] onMapCreated: GoogleMap berhasil diinisialisasi.');
               _mapController = controller;
               // Set initial map position to user location if already available
               if (_userPosition != null) {
+                debugPrint('[MAP DEBUG] Geser kamera ke lokasi user: ${_userPosition!.latitude}, ${_userPosition!.longitude}');
                 controller.animateCamera(CameraUpdate.newLatLngZoom(
                   LatLng(_userPosition!.latitude, _userPosition!.longitude), 13.0));
               }
+            },
+            onCameraMove: (position) {
+              // debugPrint('[MAP DEBUG] onCameraMove: $position'); // Bisa di-uncomment jika butuh detail ekstrim
+            },
+            onCameraIdle: () {
+              debugPrint('[MAP DEBUG] onCameraIdle: Kamera berhenti bergerak.');
             },
             initialCameraPosition: CameraPosition(
               target: _userPosition != null 

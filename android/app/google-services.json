@@ -15,11 +15,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "189274994253-rpunj8mhs1olroggrgf48umaa7bnknic.apps.googleusercontent.com",
+          "client_id": "189274994253-ni66s4av44khgspguc2suf9o8au5a0dn.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.paws_care",
-            "certificate_hash": "15ba19cf693f2cd833551b9c9e89491b961a5618"
+            "certificate_hash": "440ead2a841a7accda45983bf118b1e6fa7e1ef8"
           }
         },
         {

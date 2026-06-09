@@ -9,8 +9,8 @@ import 'package:paws_care/models/user_model.dart';
 import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/services/auth_service.dart';
 import 'package:paws_care/screens/login_screen.dart';
-import 'package:paws_care/screens/image_crop_screen.dart';
 import 'package:paws_care/screens/notification_settings_screen.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -162,14 +162,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
       imageQuality: 85,
     );
     if (picked != null && mounted) {
-      final bytes = await picked.readAsBytes();
-      // Navigate to crop screen with square 1:1 ratio
-      if (!mounted) return;
-      final croppedBytes = await Navigator.push<Uint8List>(
-        context,
-        MaterialPageRoute(builder: (_) => ImageCropScreen(imageBytes: bytes, aspectRatio: 1.0)),
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: picked.path,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Foto Profil',
+            toolbarColor: Colors.black,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+          ),
+          IOSUiSettings(
+            title: 'Crop Foto Profil',
+            aspectRatioLockEnabled: true,
+            aspectRatioPickerButtonHidden: true,
+          ),
+          WebUiSettings(
+            context: context,
+            presentStyle: WebPresentStyle.dialog,
+          ),
+        ],
       );
-      if (croppedBytes != null && mounted) {
+
+      if (croppedFile != null && mounted) {
+        final croppedBytes = await croppedFile.readAsBytes();
         final base64Str = base64Encode(croppedBytes);
         _showPhotoConfirmation(croppedBytes, base64Str);
       }

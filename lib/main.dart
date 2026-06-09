@@ -23,11 +23,7 @@ void main() async {
   final isDarkMode = prefs.getBool('isDarkMode') ?? false;
   themeNotifier.value = isDarkMode ? ThemeMode.dark : ThemeMode.light;
 
-  // Inisialisasi Google Sign-In dengan serverClientId (Web Client ID)
-  // Wajib untuk google_sign_in v7.x di Android
-  GoogleSignIn.instance.initialize(
-    serverClientId: '189274994253-57cruffs5l1ugfjne7djvha1prlp94vv.apps.googleusercontent.com',
-  );
+  // Removed Google SignIn initialization for v6.x
 
   // Register background message handler
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

@@ -102,13 +102,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Filter by categories (multi-select): post must have at least one matching category
     if (_selectedCategories.isNotEmpty) {
-      filtered = filtered.where((p) =>
-          p.categories.any((cat) => _selectedCategories.contains(cat))).toList();
+      filtered = filtered
+          .where((p) =>
+              p.categories.any((cat) => _selectedCategories.contains(cat)))
+          .toList();
     }
 
     // Filter by animal type
     if (_selectedAnimalType != 'Semua') {
-      filtered = filtered.where((p) => p.animalType == _selectedAnimalType).toList();
+      filtered =
+          filtered.where((p) => p.animalType == _selectedAnimalType).toList();
     }
 
     // Filter by status
@@ -119,10 +122,12 @@ class _HomeScreenState extends State<HomeScreen> {
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      filtered = filtered.where((p) =>
-          p.title.toLowerCase().contains(q) ||
-          p.description.toLowerCase().contains(q) ||
-          p.username.toLowerCase().contains(q)).toList();
+      filtered = filtered
+          .where((p) =>
+              p.title.toLowerCase().contains(q) ||
+              p.description.toLowerCase().contains(q) ||
+              p.username.toLowerCase().contains(q))
+          .toList();
     }
     return filtered;
   }
@@ -131,7 +136,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFFFF8E7),
+      backgroundColor:
+          isDark ? const Color(0xFF121212) : const Color(0xFFFFF8E7),
       body: Column(
         children: [
           _buildHeader(isDark),
@@ -148,7 +154,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader(bool isDark) {
     return Container(
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, left: 16, right: 16, bottom: 14),
+      padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 12,
+          left: 16,
+          right: 16,
+          bottom: 14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -163,32 +173,35 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset('assets/images/logo2.png',
+                    width: 150, fit: BoxFit.contain),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       '${_getGreeting()} 👋',
-                      style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF8B7355), fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? Colors.grey[400]
+                              : const Color(0xFF8B7355),
+                          fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _userName.isNotEmpty ? _userName : 'Paws & Care',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF333333)),
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color:
+                              isDark ? Colors.white : const Color(0xFF333333)),
                     ),
                   ],
-                ),
-              ),
-              GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MapScreen())),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.black.withAlpha(15), blurRadius: 8, offset: const Offset(0, 2))],
-                  ),
-                  child: const Icon(Icons.map_rounded, color: Color(0xFFF2994A), size: 22),
                 ),
               ),
             ],
@@ -202,20 +215,33 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 30 : 12), blurRadius: 10, offset: const Offset(0, 2))],
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withAlpha(isDark ? 30 : 12),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2))
+                    ],
                   ),
                   child: TextField(
                     controller: _searchController,
                     onChanged: (val) => setState(() => _searchQuery = val),
-                    style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.white : Colors.black87),
                     decoration: InputDecoration(
                       hintText: 'Cari laporan hewan...',
-                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                      prefixIcon: Icon(Icons.search_rounded, color: Colors.grey[400], size: 20),
+                      hintStyle:
+                          TextStyle(color: Colors.grey[400], fontSize: 14),
+                      prefixIcon: Icon(Icons.search_rounded,
+                          color: Colors.grey[400], size: 20),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? GestureDetector(
-                              onTap: () { _searchController.clear(); setState(() => _searchQuery = ''); },
-                              child: Icon(Icons.close_rounded, color: Colors.grey[400], size: 18),
+                              onTap: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                              child: Icon(Icons.close_rounded,
+                                  color: Colors.grey[400], size: 18),
                             )
                           : null,
                       border: InputBorder.none,
@@ -235,13 +261,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 46,
                   width: 46,
                   decoration: BoxDecoration(
-                    color: _showFilters ? const Color(0xFFF2994A) : (isDark ? const Color(0xFF2C2C2C) : Colors.white),
+                    color: _showFilters
+                        ? const Color(0xFFF2994A)
+                        : (isDark ? const Color(0xFF2C2C2C) : Colors.white),
                     borderRadius: BorderRadius.circular(14),
-                    boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 30 : 12), blurRadius: 10, offset: const Offset(0, 2))],
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withAlpha(isDark ? 30 : 12),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2))
+                    ],
                   ),
                   child: Icon(
                     Icons.filter_list_rounded,
-                    color: _showFilters ? Colors.white : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                    color: _showFilters
+                        ? Colors.white
+                        : (isDark ? Colors.grey[400] : Colors.grey[600]),
                   ),
                 ),
               ),
@@ -259,7 +294,11 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 16, top: 8),
-          child: Text('Kategori', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+          child: Text('Kategori',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600])),
         ),
         SizedBox(
           height: 46,
@@ -270,7 +309,9 @@ class _HomeScreenState extends State<HomeScreen> {
             itemBuilder: (context, index) {
               final cat = _categoryFilters[index];
               final label = cat['label']!;
-              final isSelected = label == 'Semua' ? isAllSelected : _selectedCategories.contains(label);
+              final isSelected = label == 'Semua'
+                  ? isAllSelected
+                  : _selectedCategories.contains(label);
               return CategoryChip(
                 label: label,
                 emoji: cat['emoji']!,
@@ -290,7 +331,11 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 16, top: 2),
-          child: Text('Jenis Hewan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+          child: Text('Jenis Hewan',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600])),
         ),
         SizedBox(
           height: 46,
@@ -304,7 +349,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: type['label']!,
                 emoji: type['emoji']!,
                 isSelected: _selectedAnimalType == type['label'],
-                onTap: () => setState(() => _selectedAnimalType = type['label']!),
+                onTap: () =>
+                    setState(() => _selectedAnimalType = type['label']!),
               );
             },
           ),
@@ -319,7 +365,11 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 16, top: 2),
-          child: Text('Status Postingan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+          child: Text('Status Postingan',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600])),
         ),
         SizedBox(
           height: 46,
@@ -362,19 +412,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFFFF3E0),
+                    color: isDark
+                        ? const Color(0xFF2C2C2C)
+                        : const Color(0xFFFFF3E0),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.pets_rounded, size: 48, color: Colors.grey[400]),
+                  child: Icon(Icons.pets_rounded,
+                      size: 48, color: Colors.grey[400]),
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  _searchQuery.isNotEmpty ? 'Tidak ada hasil' : 'Belum ada laporan',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                  _searchQuery.isNotEmpty
+                      ? 'Tidak ada hasil'
+                      : 'Belum ada laporan',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600]),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  _searchQuery.isNotEmpty ? 'Coba kata kunci lain' : 'Jadilah yang pertama melapor!',
+                  _searchQuery.isNotEmpty
+                      ? 'Coba kata kunci lain'
+                      : 'Jadilah yang pertama melapor!',
                   style: TextStyle(fontSize: 13, color: Colors.grey[400]),
                 ),
               ],
@@ -389,8 +449,12 @@ class _HomeScreenState extends State<HomeScreen> {
             return PostCard(
               post: post,
               currentUserId: _currentUserId,
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DetailScreen(postId: post.postId))),
-              onFavorite: () => _service.toggleFavorite(post.postId, _currentUserId),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => DetailScreen(postId: post.postId))),
+              onFavorite: () =>
+                  _service.toggleFavorite(post.postId, _currentUserId),
             );
           },
         );
@@ -416,7 +480,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF3A3A3A) : Colors.grey[200],
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
               ),
             ),
@@ -427,11 +492,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(height: 14, width: 160, decoration: BoxDecoration(color: isDark ? const Color(0xFF3A3A3A) : Colors.grey[200], borderRadius: BorderRadius.circular(4))),
+                    Container(
+                        height: 14,
+                        width: 160,
+                        decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF3A3A3A)
+                                : Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4))),
                     const SizedBox(height: 8),
-                    Container(height: 10, width: 220, decoration: BoxDecoration(color: isDark ? const Color(0xFF3A3A3A) : Colors.grey[200], borderRadius: BorderRadius.circular(4))),
+                    Container(
+                        height: 10,
+                        width: 220,
+                        decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF3A3A3A)
+                                : Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4))),
                     const SizedBox(height: 6),
-                    Container(height: 10, width: 140, decoration: BoxDecoration(color: isDark ? const Color(0xFF3A3A3A) : Colors.grey[200], borderRadius: BorderRadius.circular(4))),
+                    Container(
+                        height: 10,
+                        width: 140,
+                        decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF3A3A3A)
+                                : Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4))),
                   ],
                 ),
               ),

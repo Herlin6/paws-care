@@ -11,6 +11,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:paws_care/services/firestore_service.dart';
 import 'package:paws_care/services/notification_api_service.dart';
 import 'package:paws_care/screens/edit_post_screen.dart';
+import 'package:paws_care/widgets/image_source_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
@@ -260,14 +262,39 @@ class _DetailScreenState extends State<DetailScreen> {
                     const SizedBox(height: 16),
                     GestureDetector(
                       onTap: () async {
-                        final picker = ImagePicker();
-                        final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 600, maxHeight: 450, imageQuality: 85);
+                        final picked = await ImageSourcePicker.pickImage(
+                          context,
+                          maxWidth: 800,
+                          maxHeight: 800,
+                          imageQuality: 85,
+                        );
                         if (picked != null) {
-                          final bytes = await picked.readAsBytes();
-                          setModalState(() {
-                            proofBytes = bytes;
-                            proofBase64 = base64Encode(bytes);
-                          });
+                          final croppedFile = await ImageCropper().cropImage(
+                            sourcePath: picked.path,
+                            uiSettings: [
+                              AndroidUiSettings(
+                                toolbarTitle: 'Crop Bukti Penyelesaian',
+                                toolbarColor: Colors.black,
+                                toolbarWidgetColor: Colors.white,
+                                initAspectRatio: CropAspectRatioPreset.original,
+                                lockAspectRatio: false,
+                              ),
+                              IOSUiSettings(
+                                title: 'Crop Bukti',
+                              ),
+                              WebUiSettings(
+                                context: context,
+                                presentStyle: WebPresentStyle.dialog,
+                              ),
+                            ],
+                          );
+                          if (croppedFile != null) {
+                            final bytes = await croppedFile.readAsBytes();
+                            setModalState(() {
+                              proofBytes = bytes;
+                              proofBase64 = base64Encode(bytes);
+                            });
+                          }
                         }
                       },
                       child: Container(

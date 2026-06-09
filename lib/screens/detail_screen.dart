@@ -53,6 +53,104 @@ class _DetailScreenState extends State<DetailScreen> {
     super.dispose();
   }
 
+  Widget _buildApprovalPanel(PostModel post, bool isDark) {
+    if (post.status != 'Menunggu Konfirmasi Penyelesaian' || post.userId != _currentUserId) return const SizedBox.shrink();
+    
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.5), width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blueAccent),
+              SizedBox(width: 8),
+              Expanded(child: Text('Menunggu Konfirmasi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blueAccent))),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('Seorang relawan telah mengajukan penyelesaian laporan ini.', style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[300] : Colors.grey[700])),
+          const SizedBox(height: 12),
+          if (post.completionProofBase64.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(base64Decode(post.completionProofBase64), height: 120, width: double.infinity, fit: BoxFit.cover),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (post.completionNote.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(10),
+              width: double.infinity,
+              decoration: BoxDecoration(color: isDark ? Colors.grey[800] : Colors.grey[100], borderRadius: BorderRadius.circular(8)),
+              child: Text('Catatan:\n${post.completionNote}', style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: isDark ? Colors.grey[300] : Colors.grey[700])),
+            ),
+            const SizedBox(height: 16),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _rejectCompletion(post),
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red)),
+                  child: const Text('Tolak'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _approveCompletion(post),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4CAF50), foregroundColor: Colors.white),
+                  child: const Text('Setujui'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _approveCompletion(PostModel post) async {
+    await _service.approveCompletion(widget.postId);
+    _sendApprovalNotification(post);
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Penyelesaian disetujui! ✅'), backgroundColor: Color(0xFF4CAF50)));
+  }
+
+  void _rejectCompletion(PostModel post) {
+    final reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Tolak Penyelesaian'),
+        content: TextField(
+          controller: reasonController,
+          decoration: const InputDecoration(hintText: 'Alasan penolakan (opsional)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _service.rejectCompletion(postId: widget.postId, reason: reasonController.text.trim());
+              _sendRejectionNotification(post);
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Penyelesaian ditolak.'), backgroundColor: Colors.red));
+            },
+            child: const Text('Tolak', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inDays > 0) return '${diff.inDays} hari lalu';
@@ -66,6 +164,7 @@ class _DetailScreenState extends State<DetailScreen> {
       case 'Butuh Bantuan': return const Color(0xFFE53935);
       case 'Sedang Ditangani': return const Color(0xFFF2994A);
       case 'Berhasil Ditangani': return const Color(0xFF4CAF50);
+      case 'Menunggu Konfirmasi Penyelesaian': return Colors.blueAccent;
       default: return Colors.grey;
     }
   }
@@ -91,6 +190,7 @@ class _DetailScreenState extends State<DetailScreen> {
               Navigator.pop(ctx);
               if (isJoined) {
                 await _service.cancelVolunteer(widget.postId, _currentUserId);
+                _sendVolunteerCancelNotification(post);
               } else {
                 final success = await _service.joinVolunteer(widget.postId, _currentUserId);
                 if (success) {
@@ -110,10 +210,11 @@ class _DetailScreenState extends State<DetailScreen> {
     );
   }
 
-  void _showCompletionDialog() {
-    Uint8List? proofBytes;
+  void _showCompletionDialog(PostModel post) {
     String proofBase64 = '';
+    Uint8List? proofBytes;
     final noteController = TextEditingController();
+    final bool isOwner = post.userId == _currentUserId;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
@@ -160,7 +261,7 @@ class _DetailScreenState extends State<DetailScreen> {
                     GestureDetector(
                       onTap: () async {
                         final picker = ImagePicker();
-                        final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 600, maxHeight: 450, imageQuality: 35);
+                        final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 600, maxHeight: 450, imageQuality: 85);
                         if (picked != null) {
                           final bytes = await picked.readAsBytes();
                           setModalState(() {
@@ -210,16 +311,23 @@ class _DetailScreenState extends State<DetailScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload foto bukti terlebih dahulu!')));
                             return;
                           }
-                          await _service.markCompleted(postId: widget.postId, uid: _currentUserId, proofBase64: proofBase64, note: noteController.text.trim());
-                          // Kirim notifikasi laporan selesai
-                          _sendCompletionNotification();
+                          if (isOwner) {
+                            await _service.markCompleted(postId: widget.postId, uid: _currentUserId, proofBase64: proofBase64, note: noteController.text.trim());
+                            _sendCompletionNotification();
+                          } else {
+                            await _service.submitCompletionRequest(postId: widget.postId, uid: _currentUserId, proofBase64: proofBase64, note: noteController.text.trim());
+                            _sendCompletionRequestNotification(post);
+                          }
                           if (context.mounted) {
                             Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kasus ditandai selesai! ✅'), backgroundColor: Color(0xFF4CAF50)));
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(isOwner ? 'Kasus ditandai selesai! ✅' : 'Permintaan penyelesaian dikirim! ⏳'),
+                              backgroundColor: const Color(0xFF4CAF50),
+                            ));
                           }
                         },
                         icon: const Icon(Icons.check_circle_outline, size: 20),
-                        label: const Text('Tandai Selesai', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                        label: Text(isOwner ? 'Tandai Selesai' : 'Ajukan Penyelesaian', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4CAF50), foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                       ),
@@ -548,6 +656,82 @@ class _DetailScreenState extends State<DetailScreen> {
     } catch (_) {}
   }
 
+  /// Kirim notifikasi relawan membatalkan bantuan ke pemilik post
+  Future<void> _sendVolunteerCancelNotification(PostModel post) async {
+    try {
+      if (post.userId == _currentUserId) return;
+
+      final db = FirebaseFirestore.instance;
+      final ownerDoc = await db.collection('users').doc(post.userId).get();
+      final ownerToken = ownerDoc.data()?['fcmToken'] as String?;
+      if (ownerToken != null && ownerToken.isNotEmpty) {
+        NotificationApiService().sendNotification(
+          token: ownerToken,
+          title: 'Relawan Membatalkan Bantuan',
+          body: '$_currentUsername membatalkan bantuan pada laporan Anda.',
+          data: {'postId': widget.postId},
+        );
+      }
+    } catch (_) {}
+  }
+
+  /// Kirim notifikasi relawan mengajukan penyelesaian
+  Future<void> _sendCompletionRequestNotification(PostModel post) async {
+    try {
+      if (post.userId == _currentUserId) return;
+
+      final db = FirebaseFirestore.instance;
+      final ownerDoc = await db.collection('users').doc(post.userId).get();
+      final ownerToken = ownerDoc.data()?['fcmToken'] as String?;
+      if (ownerToken != null && ownerToken.isNotEmpty) {
+        NotificationApiService().sendNotification(
+          token: ownerToken,
+          title: 'Permintaan Penyelesaian Laporan',
+          body: '$_currentUsername telah mengajukan penyelesaian laporan dan menunggu konfirmasi Anda.',
+          data: {'postId': widget.postId},
+        );
+      }
+    } catch (_) {}
+  }
+
+  /// Kirim notifikasi penyelesaian disetujui
+  Future<void> _sendApprovalNotification(PostModel post) async {
+    try {
+      if (post.completedByUid.isEmpty || post.completedByUid == _currentUserId) return;
+
+      final db = FirebaseFirestore.instance;
+      final volDoc = await db.collection('users').doc(post.completedByUid).get();
+      final volToken = volDoc.data()?['fcmToken'] as String?;
+      if (volToken != null && volToken.isNotEmpty) {
+        NotificationApiService().sendNotification(
+          token: volToken,
+          title: 'Penyelesaian Disetujui',
+          body: 'Pemilik laporan menyetujui pengajuan penyelesaian Anda pada: ${post.title}',
+          data: {'postId': widget.postId},
+        );
+      }
+    } catch (_) {}
+  }
+
+  /// Kirim notifikasi penyelesaian ditolak
+  Future<void> _sendRejectionNotification(PostModel post) async {
+    try {
+      if (post.completedByUid.isEmpty || post.completedByUid == _currentUserId) return;
+
+      final db = FirebaseFirestore.instance;
+      final volDoc = await db.collection('users').doc(post.completedByUid).get();
+      final volToken = volDoc.data()?['fcmToken'] as String?;
+      if (volToken != null && volToken.isNotEmpty) {
+        NotificationApiService().sendNotification(
+          token: volToken,
+          title: 'Penyelesaian Ditolak',
+          body: 'Pemilik laporan menolak pengajuan penyelesaian Anda pada: ${post.title}',
+          data: {'postId': widget.postId},
+        );
+      }
+    } catch (_) {}
+  }
+
   /// Kirim notifikasi laporan selesai ke pemilik post
   Future<void> _sendCompletionNotification() async {
     try {
@@ -628,6 +812,9 @@ class _DetailScreenState extends State<DetailScreen> {
               decoration: BoxDecoration(color: _statusColor(post.status), borderRadius: BorderRadius.circular(16)),
               child: Text(post.status, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)))),
         ]),
+      ),
+      SliverToBoxAdapter(
+        child: _buildApprovalPanel(post, isDark),
       ),
       // Title row with edit/delete buttons on the right
       SliverToBoxAdapter(
@@ -726,12 +913,20 @@ class _DetailScreenState extends State<DetailScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   side: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!)))),
               const SizedBox(width: 12),
-              if (isJoined)
+              if (isOwner)
                 Expanded(flex: 2, child: ElevatedButton.icon(
-                  onPressed: _showCompletionDialog,
+                  onPressed: () => _showCompletionDialog(post),
                   icon: const Icon(Icons.check_circle_outline, size: 18),
-                  label: const Text('Selesai', style: TextStyle(fontSize: 13)),
+                  label: const Text('Tandai Selesai', style: TextStyle(fontSize: 13)),
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4CAF50), foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)))))
+              else if (isJoined)
+                Expanded(flex: 2, child: ElevatedButton.icon(
+                  onPressed: post.status == 'Menunggu Konfirmasi Penyelesaian' ? null : () => _showCompletionDialog(post),
+                  icon: const Icon(Icons.check_circle_outline, size: 18),
+                  label: Text(post.status == 'Menunggu Konfirmasi Penyelesaian' ? 'Menunggu Konfirmasi' : 'Selesai', style: const TextStyle(fontSize: 13)),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4CAF50), foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey[400], disabledForegroundColor: Colors.white70,
                     padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)))))
               else
                 Expanded(flex: 2, child: ElevatedButton.icon(

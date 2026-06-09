@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:paws_care/widgets/image_source_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:paws_care/models/post_model.dart';
 import 'package:paws_care/services/firestore_service.dart';
@@ -87,8 +87,12 @@ class _EditPostScreenState extends State<EditPostScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 50);
+    final picked = await ImageSourcePicker.pickImage(
+      context,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 50,
+    );
     if (picked != null && mounted) {
       final bytes = await picked.readAsBytes();
       _originalImageBytes = bytes;

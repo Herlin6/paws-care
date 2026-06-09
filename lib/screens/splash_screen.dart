@@ -108,43 +108,25 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                     child: ScaleTransition(
                       scale: _pulseAnim,
                       child: Container(
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: isDark
-                                ? [const Color(0xFF3A3020), const Color(0xFF2A2218)]
-                                : [Colors.white.withAlpha(200), Colors.white.withAlpha(120)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFF2994A).withAlpha(isDark ? 50 : 60),
+                              color: const Color(0xFFF2994A).withValues(alpha: isDark ? 0.2 : 0.3),
                               blurRadius: 30,
                               spreadRadius: 5,
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.pets_rounded, size: 64, color: Color(0xFFF2994A)),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 28),
-                // Title with slide animation
-                Transform.translate(
-                  offset: Offset(0, _slideAnim.value),
-                  child: Opacity(
-                    opacity: _fadeAnim.value,
-                    child: RichText(
-                      text: TextSpan(
-                        style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold, letterSpacing: -0.5),
-                        children: [
-                          TextSpan(text: 'Paws ', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF333333))),
-                          const TextSpan(text: '& ', style: TextStyle(color: Color(0xFFF2994A))),
-                          TextSpan(text: 'Care', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF333333))),
-                        ],
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            height: 180,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
                       ),
                     ),
                   ),

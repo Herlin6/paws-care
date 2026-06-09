@@ -22,6 +22,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
   final Set<String> _selectedCategories = {};
   String _selectedAnimalType = 'Semua';
+  String _selectedStatus = 'Semua';
+  bool _showFilters = false;
   String _searchQuery = '';
   String _userName = '';
 
@@ -44,6 +46,14 @@ class _HomeScreenState extends State<HomeScreen> {
     {'label': 'Kelinci', 'emoji': '🐰'},
     {'label': 'Reptil', 'emoji': '🦎'},
     {'label': 'Lainnya', 'emoji': '🐾'},
+  ];
+
+  final List<Map<String, String>> _statusFilters = [
+    {'label': 'Semua', 'emoji': '📋'},
+    {'label': 'Butuh Bantuan', 'emoji': '🆘'},
+    {'label': 'Sedang Ditangani', 'emoji': '🤝'},
+    {'label': 'Menunggu Konfirmasi Penyelesaian', 'emoji': '⏳'},
+    {'label': 'Berhasil Ditangani', 'emoji': '✅'},
   ];
 
   @override
@@ -101,6 +111,11 @@ class _HomeScreenState extends State<HomeScreen> {
       filtered = filtered.where((p) => p.animalType == _selectedAnimalType).toList();
     }
 
+    // Filter by status
+    if (_selectedStatus != 'Semua') {
+      filtered = filtered.where((p) => p.status == _selectedStatus).toList();
+    }
+
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
@@ -120,8 +135,11 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           _buildHeader(isDark),
-          _buildCategoryChips(isDark),
-          _buildAnimalTypeChips(isDark),
+          if (_showFilters) ...[
+            _buildCategoryChips(isDark),
+            _buildAnimalTypeChips(isDark),
+            _buildStatusChips(isDark),
+          ],
           Expanded(child: _buildPostList(isDark)),
         ],
       ),
@@ -176,31 +194,58 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          Container(
-            height: 46,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 30 : 12), blurRadius: 10, offset: const Offset(0, 2))],
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (val) => setState(() => _searchQuery = val),
-              style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
-              decoration: InputDecoration(
-                hintText: 'Cari laporan hewan...',
-                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                prefixIcon: Icon(Icons.search_rounded, color: Colors.grey[400], size: 20),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? GestureDetector(
-                        onTap: () { _searchController.clear(); setState(() => _searchQuery = ''); },
-                        child: Icon(Icons.close_rounded, color: Colors.grey[400], size: 18),
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 13),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 30 : 12), blurRadius: 10, offset: const Offset(0, 2))],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
+                    decoration: InputDecoration(
+                      hintText: 'Cari laporan hewan...',
+                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                      prefixIcon: Icon(Icons.search_rounded, color: Colors.grey[400], size: 20),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? GestureDetector(
+                              onTap: () { _searchController.clear(); setState(() => _searchQuery = ''); },
+                              child: Icon(Icons.close_rounded, color: Colors.grey[400], size: 18),
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                    ),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _showFilters = !_showFilters;
+                  });
+                },
+                child: Container(
+                  height: 46,
+                  width: 46,
+                  decoration: BoxDecoration(
+                    color: _showFilters ? const Color(0xFFF2994A) : (isDark ? const Color(0xFF2C2C2C) : Colors.white),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 30 : 12), blurRadius: 10, offset: const Offset(0, 2))],
+                  ),
+                  child: Icon(
+                    Icons.filter_list_rounded,
+                    color: _showFilters ? Colors.white : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -264,6 +309,36 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildStatusChips(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 16, top: 2),
+          child: Text('Status Postingan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+        ),
+        SizedBox(
+          height: 46,
+          child: ListView.builder(
+            padding: const EdgeInsets.only(left: 16, top: 4, bottom: 4),
+            scrollDirection: Axis.horizontal,
+            itemCount: _statusFilters.length,
+            itemBuilder: (context, index) {
+              final type = _statusFilters[index];
+              return CategoryChip(
+                label: type['label']!,
+                emoji: type['emoji']!,
+                isSelected: _selectedStatus == type['label'],
+                onTap: () => setState(() => _selectedStatus = type['label']!),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
       ],
     );
   }

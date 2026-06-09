@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:paws_care/widgets/image_source_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:paws_care/main.dart';
 import 'package:paws_care/models/user_model.dart';
 import 'package:paws_care/services/firestore_service.dart';
@@ -87,7 +88,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               title: Text('Ubah Foto Profil',
                 style: TextStyle(fontWeight: FontWeight.w500, color: isDark ? Colors.white : Colors.black87)),
-              subtitle: Text('Pilih foto baru dari galeri',
+              subtitle: Text('Ambil dari kamera atau galeri',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500])),
               onTap: () {
                 Navigator.pop(ctx);
@@ -154,12 +155,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _pickAndConfirmProfilePhoto() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
+    final picked = await ImageSourcePicker.pickImage(
+      context,
       maxWidth: 600,
       maxHeight: 600,
-      imageQuality: 50,
+      imageQuality: 85,
     );
     if (picked != null && mounted) {
       final bytes = await picked.readAsBytes();
@@ -555,7 +555,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(children: [
         Icon(Icons.dark_mode_outlined, color: Colors.grey[600], size: 22), const SizedBox(width: 14),
         Expanded(child: Text('Dark Mode', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: isDark ? Colors.white : Colors.black87))),
-        Switch(value: isDark, onChanged: (_) => themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark, activeTrackColor: const Color(0xFFF2994A)),
+        Switch(value: isDark, onChanged: (val) async {
+          themeNotifier.value = val ? ThemeMode.dark : ThemeMode.light;
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isDarkMode', val);
+        }, activeTrackColor: const Color(0xFFF2994A)),
       ]),
     );
   }

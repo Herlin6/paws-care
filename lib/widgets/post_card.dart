@@ -25,6 +25,7 @@ class PostCard extends StatelessWidget {
       case 'Butuh Bantuan': return const Color(0xFFE53935);
       case 'Sedang Ditangani': return const Color(0xFFF2994A);
       case 'Berhasil Ditangani': return const Color(0xFF4CAF50);
+      case 'Menunggu Konfirmasi Penyelesaian': return Colors.blueAccent;
       default: return Colors.grey;
     }
   }

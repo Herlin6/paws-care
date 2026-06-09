@@ -8,6 +8,7 @@ import 'package:paws_care/services/notification_service.dart';
 import 'package:paws_care/services/fcm_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Global theme notifier for dark mode toggle
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
@@ -17,6 +18,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  final prefs = await SharedPreferences.getInstance();
+  final isDarkMode = prefs.getBool('isDarkMode') ?? false;
+  themeNotifier.value = isDarkMode ? ThemeMode.dark : ThemeMode.light;
 
   // Inisialisasi Google Sign-In dengan serverClientId (Web Client ID)
   // Wajib untuk google_sign_in v7.x di Android

@@ -178,6 +178,8 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
                         Positioned.fill(
                           child: InteractiveViewer(
                             transformationController: _controller,
+                            boundaryMargin: const EdgeInsets.all(double.infinity),
+                            clipBehavior: Clip.none,
                             minScale: 0.5,
                             maxScale: 5.0,
                             child: Image.memory(widget.imageBytes, fit: BoxFit.contain),

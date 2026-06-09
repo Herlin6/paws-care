@@ -211,13 +211,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 28),
             child: Column(children: [
               const SizedBox(height: 60),
-              const Icon(Icons.pets, size: 56, color: Color(0xFFF2994A)),
-              const SizedBox(height: 16),
-              RichText(text: TextSpan(style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold), children: [
-                TextSpan(text: 'Paws ', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF333333))),
-                const TextSpan(text: '& ', style: TextStyle(color: Color(0xFFF2994A))),
-                TextSpan(text: 'Care', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF333333))),
-              ])),
+              Image.asset(
+                'assets/images/logo.png',
+                height: 140,
+                fit: BoxFit.contain,
+              ),
               const SizedBox(height: 8),
               Text('Selamatkan & rawat hewan di sekitarmu 🐾', style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF666666))),
               const SizedBox(height: 36),

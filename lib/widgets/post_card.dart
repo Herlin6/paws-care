@@ -73,6 +73,7 @@ class PostCard extends StatelessWidget {
                       ? Image.memory(
                           base64Decode(post.imageBase64),
                           height: 200, width: double.infinity, fit: BoxFit.cover,
+                          gaplessPlayback: true,
                           errorBuilder: (_, __, ___) => _buildPlaceholder())
                       : _buildPlaceholder(),
                 ),

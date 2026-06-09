@@ -20,10 +20,11 @@ class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
   final TextEditingController _searchController = TextEditingController();
   String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
+  late final Stream<List<PostModel>> _postsStream;
   final Set<String> _selectedCategories = {};
   String _selectedAnimalType = 'Semua';
   String _selectedStatus = 'Semua';
-  bool _showFilters = false;
+  final ValueNotifier<bool> _showFiltersNotifier = ValueNotifier(false);
   String _searchQuery = '';
   String _userName = '';
 
@@ -59,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _postsStream = _service.streamPosts();
     _loadUserName();
   }
 
@@ -72,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _showFiltersNotifier.dispose();
     super.dispose();
   }
 
@@ -141,12 +144,56 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           _buildHeader(isDark),
-          if (_showFilters) ...[
-            _buildCategoryChips(isDark),
-            _buildAnimalTypeChips(isDark),
-            _buildStatusChips(isDark),
-          ],
-          Expanded(child: _buildPostList(isDark)),
+          Expanded(
+            child: Stack(
+              children: [
+                _buildPostList(isDark),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: _showFiltersNotifier,
+                    builder: (context, showFilters, child) {
+                      return AnimatedSize(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        alignment: Alignment.topCenter,
+                        child: showFilters
+                            ? Container(
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF121212)
+                                      : const Color(0xFFFFF8E7),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha(isDark ? 60 : 20),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    )
+                                  ],
+                                  borderRadius: const BorderRadius.only(
+                                    bottomLeft: Radius.circular(16),
+                                    bottomRight: Radius.circular(16),
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildCategoryChips(isDark),
+                                    _buildAnimalTypeChips(isDark),
+                                    _buildStatusChips(isDark),
+                                  ],
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -173,11 +220,11 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.asset('assets/images/logo2.png',
-                    width: 150, fit: BoxFit.contain),
-              ),
+              // ClipRRect(
+              //   borderRadius: BorderRadius.circular(10),
+              //   child: Image.asset('assets/images/logo2.png',
+              //       width: 150, fit: BoxFit.contain),
+              // ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -251,34 +298,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _showFilters = !_showFilters;
-                  });
+              ValueListenableBuilder<bool>(
+                valueListenable: _showFiltersNotifier,
+                builder: (context, showFilters, child) {
+                  return GestureDetector(
+                    onTap: () {
+                      _showFiltersNotifier.value = !showFilters;
+                    },
+                    child: Container(
+                      height: 46,
+                      width: 46,
+                      decoration: BoxDecoration(
+                        color: showFilters
+                            ? const Color(0xFFF2994A)
+                            : (isDark ? const Color(0xFF2C2C2C) : Colors.white),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withAlpha(isDark ? 30 : 12),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2))
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.filter_alt_outlined,
+                        color: showFilters
+                            ? Colors.white
+                            : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                      ),
+                    ),
+                  );
                 },
-                child: Container(
-                  height: 46,
-                  width: 46,
-                  decoration: BoxDecoration(
-                    color: _showFilters
-                        ? const Color(0xFFF2994A)
-                        : (isDark ? const Color(0xFF2C2C2C) : Colors.white),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withAlpha(isDark ? 30 : 12),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2))
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.filter_list_rounded,
-                    color: _showFilters
-                        ? Colors.white
-                        : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                  ),
-                ),
               ),
             ],
           ),
@@ -395,7 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPostList(bool isDark) {
     return StreamBuilder<List<PostModel>>(
-      stream: _service.streamPosts(),
+      stream: _postsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildLoadingShimmer(isDark);
@@ -447,6 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
           itemBuilder: (context, index) {
             final post = posts[index];
             return PostCard(
+              key: ValueKey(post.postId),
               post: post,
               currentUserId: _currentUserId,
               onTap: () => Navigator.push(

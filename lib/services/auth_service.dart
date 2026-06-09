@@ -12,6 +12,16 @@ class AuthService {
   String? get currentUserId => _auth.currentUser?.uid;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  /// Validate password requirements
+  bool isPasswordValid(String password) {
+    if (password.length < 8) return false;
+    if (password.isEmpty || password[0] != password[0].toUpperCase() || password[0] == password[0].toLowerCase()) return false;
+    if (!password.contains(RegExp(r'[a-z]'))) return false;
+    if (!password.contains(RegExp(r'[0-9]'))) return false;
+    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/~`]'))) return false;
+    return true;
+  }
+
   /// Register with email and password
   /// Checks username availability before creating account
   Future<User?> register({
@@ -24,6 +34,11 @@ class AuthService {
     final isAvailable = await _firestoreService.isUsernameAvailable(username);
     if (!isAvailable) {
       throw Exception('Username sudah digunakan, silakan gunakan username lain.');
+    }
+    
+    // Check password validity
+    if (!isPasswordValid(password)) {
+      throw Exception('Password tidak memenuhi syarat keamanan.');
     }
 
     try {
@@ -146,6 +161,10 @@ class AuthService {
 
   /// Update password in Firebase Auth and Firestore
   Future<void> updatePassword(String newPassword) async {
+    if (!isPasswordValid(newPassword)) {
+      throw Exception('Password tidak memenuhi syarat keamanan.');
+    }
+    
     final user = _auth.currentUser;
     if (user != null) {
       await user.updatePassword(newPassword);

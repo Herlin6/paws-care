@@ -330,75 +330,116 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool obscure1 = true;
     bool obscure2 = true;
 
+    bool hasMinLength = false;
+    bool hasUpperFirst = false;
+    bool hasLowerCase = false;
+    bool hasDigit = false;
+    bool hasSpecialChar = false;
+
+    bool isPasswordValid() =>
+        hasMinLength && hasUpperFirst && hasLowerCase && hasDigit && hasSpecialChar;
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Ubah Password'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: newPassCtrl,
-                obscureText: obscure1,
-                decoration: _editDeco('Password Baru').copyWith(
-                  suffixIcon: IconButton(
-                    icon: Icon(obscure1 ? Icons.visibility_off : Icons.visibility, size: 20, color: Colors.grey),
-                    onPressed: () => setDialogState(() => obscure1 = !obscure1),
+        builder: (context, setDialogState) {
+          void validatePassword(String password) {
+            setDialogState(() {
+              hasMinLength = password.length >= 8;
+              hasUpperFirst = password.isNotEmpty && password[0] == password[0].toUpperCase() && password[0] != password[0].toLowerCase();
+              hasLowerCase = password.contains(RegExp(r'[a-z]'));
+              hasDigit = password.contains(RegExp(r'[0-9]'));
+              hasSpecialChar = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/~`]'));
+            });
+          }
+
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Ubah Password'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: newPassCtrl,
+                    obscureText: obscure1,
+                    onChanged: validatePassword,
+                    decoration: _editDeco('Password Baru').copyWith(
+                      suffixIcon: IconButton(
+                        icon: Icon(obscure1 ? Icons.visibility_off : Icons.visibility, size: 20, color: Colors.grey),
+                        onPressed: () => setDialogState(() => obscure1 = !obscure1),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFF8E7),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: isDark ? Colors.grey[700]! : Colors.grey[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Syarat Password:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[300] : Colors.grey[700])),
+                        const SizedBox(height: 8),
+                        _buildPasswordRequirement('Minimal 8 karakter', hasMinLength),
+                        _buildPasswordRequirement('Huruf pertama harus kapital', hasUpperFirst),
+                        _buildPasswordRequirement('Mengandung minimal 1 huruf kecil', hasLowerCase),
+                        _buildPasswordRequirement('Mengandung minimal 1 angka', hasDigit),
+                        _buildPasswordRequirement('Mengandung minimal 1 karakter khusus', hasSpecialChar),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: confirmPassCtrl,
+                    obscureText: obscure2,
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: _editDeco('Konfirmasi Password').copyWith(
+                      suffixIcon: IconButton(
+                        icon: Icon(obscure2 ? Icons.visibility_off : Icons.visibility, size: 20, color: Colors.grey),
+                        onPressed: () => setDialogState(() => obscure2 = !obscure2),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: confirmPassCtrl,
-                obscureText: obscure2,
-                decoration: _editDeco('Konfirmasi Password').copyWith(
-                  suffixIcon: IconButton(
-                    icon: Icon(obscure2 ? Icons.visibility_off : Icons.visibility, size: 20, color: Colors.grey),
-                    onPressed: () => setDialogState(() => obscure2 = !obscure2),
-                  ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              ElevatedButton(
+                onPressed: (isPasswordValid() && newPassCtrl.text.trim() == confirmPassCtrl.text.trim() && confirmPassCtrl.text.trim().isNotEmpty) ? () async {
+                  final newPass = newPassCtrl.text.trim();
+                  try {
+                    Navigator.pop(ctx);
+                    await _authService.updatePassword(newPass);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Password berhasil diubah! ✅'), backgroundColor: Color(0xFF4CAF50)),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      final msg = e.toString().replaceFirst('Exception: ', '');
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal ubah password: $msg'), backgroundColor: Colors.red));
+                    }
+                  }
+                } : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF2994A),
+                  disabledBackgroundColor: Colors.grey[400],
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
+                child: const Text('Simpan', style: TextStyle(color: Colors.white)),
               ),
             ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-            ElevatedButton(
-              onPressed: () async {
-                final newPass = newPassCtrl.text.trim();
-                final confirmPass = confirmPassCtrl.text.trim();
-                if (newPass.isEmpty || confirmPass.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Semua field harus diisi!')));
-                  return;
-                }
-                if (newPass.length < 6) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password minimal 6 karakter!')));
-                  return;
-                }
-                if (newPass != confirmPass) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password tidak cocok!')));
-                  return;
-                }
-                try {
-                  Navigator.pop(ctx);
-                  await _authService.updatePassword(newPass);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Password berhasil diubah! ✅'), backgroundColor: Color(0xFF4CAF50)),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal ubah password: $e'), backgroundColor: Colors.red));
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF2994A), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-              child: const Text('Simpan', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -461,7 +502,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 10),
                 // Avatar with photo
                 GestureDetector(
-                  onTap: _showProfilePhotoOptions,
+                  onTap: () {
+                    if (_user?.photoBase64.isNotEmpty == true) {
+                      _showProfilePhotoOptions();
+                    } else {
+                      _pickAndConfirmProfilePhoto();
+                    }
+                  },
                   child: Stack(children: [
                     CircleAvatar(
                       radius: 48,
@@ -544,6 +591,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 4),
         Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[500])),
       ]),
+    );
+  }
+
+  Widget _buildPasswordRequirement(String text, bool isMet) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.circle_outlined,
+            size: 16,
+            color: isMet ? const Color(0xFF4CAF50) : Colors.grey[400],
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                color: isMet ? const Color(0xFF4CAF50) : (isDark ? Colors.grey[500] : Colors.grey[600]),
+                fontWeight: isMet ? FontWeight.w500 : FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

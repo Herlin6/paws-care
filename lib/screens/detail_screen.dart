@@ -27,12 +27,37 @@ class DetailScreen extends StatefulWidget {
 class _DetailScreenState extends State<DetailScreen> {
   final FirestoreService _service = FirestoreService();
   final TextEditingController _commentController = TextEditingController();
+  final FocusNode _commentFocusNode = FocusNode();
   String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
   String _currentUsername = '';
   String _currentUserRole = 'Pengguna';
 
   late Stream<PostModel?> _postStream;
   late Stream<List<CommentModel>> _commentsStream;
+
+  String? _cachedPostBase64;
+  Uint8List? _cachedPostBytes;
+
+  Uint8List? _getPostImageBytes(String base64) {
+    if (base64.isEmpty) return null;
+    if (_cachedPostBase64 != base64) {
+      _cachedPostBase64 = base64;
+      _cachedPostBytes = base64Decode(base64);
+    }
+    return _cachedPostBytes;
+  }
+
+  String? _cachedProofBase64;
+  Uint8List? _cachedProofBytes;
+
+  Uint8List? _getProofImageBytes(String base64) {
+    if (base64.isEmpty) return null;
+    if (_cachedProofBase64 != base64) {
+      _cachedProofBase64 = base64;
+      _cachedProofBytes = base64Decode(base64);
+    }
+    return _cachedProofBytes;
+  }
 
   @override
   void initState() {
@@ -57,6 +82,7 @@ class _DetailScreenState extends State<DetailScreen> {
   @override
   void dispose() {
     _commentController.dispose();
+    _commentFocusNode.dispose();
     super.dispose();
   }
 
@@ -88,7 +114,7 @@ class _DetailScreenState extends State<DetailScreen> {
           if (post.completionProofBase64.isNotEmpty) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.memory(base64Decode(post.completionProofBase64), height: 120, width: double.infinity, fit: BoxFit.cover),
+              child: Image.memory(_getProofImageBytes(post.completionProofBase64)!, height: 120, width: double.infinity, fit: BoxFit.cover, gaplessPlayback: true),
             ),
             const SizedBox(height: 8),
           ],
@@ -831,7 +857,7 @@ class _DetailScreenState extends State<DetailScreen> {
               _buildContent(post, isDark),
               // Floating fixed back button
               Positioned(
-                top: MediaQuery.of(context).padding.top + 8,
+                top: MediaQuery.paddingOf(context).top + 8,
                 left: 12,
                 child: GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -867,10 +893,10 @@ class _DetailScreenState extends State<DetailScreen> {
       SliverToBoxAdapter(
         child: Stack(children: [
           post.imageBase64.isNotEmpty
-              ? Image.memory(base64Decode(post.imageBase64), height: 280, width: double.infinity, fit: BoxFit.cover,
+              ? Image.memory(_getPostImageBytes(post.imageBase64)!, height: 280, width: double.infinity, fit: BoxFit.cover, gaplessPlayback: true,
                   errorBuilder: (_, __, ___) => Container(height: 280, color: const Color(0xFFFFF3E0), child: const Center(child: Icon(Icons.pets, size: 80, color: Color(0xFFF2994A)))))
               : Container(height: 280, width: double.infinity, color: const Color(0xFFFFF3E0), child: const Center(child: Icon(Icons.pets, size: 80, color: Color(0xFFF2994A)))),
-          Positioned(top: MediaQuery.of(context).padding.top + 8, right: 16,
+          Positioned(top: MediaQuery.paddingOf(context).top + 8, right: 16,
             child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(color: _statusColor(post.status), borderRadius: BorderRadius.circular(16)),
               child: Text(post.status, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)))),
@@ -1016,7 +1042,7 @@ class _DetailScreenState extends State<DetailScreen> {
                   Text('Berhasil Ditangani', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF4CAF50)))]),
                 if (post.completionNote.isNotEmpty) ...[const SizedBox(height: 8), Text(post.completionNote, style: TextStyle(fontSize: 13, color: Colors.grey[700]))],
                 if (post.completionProofBase64.isNotEmpty) ...[const SizedBox(height: 8),
-                  ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(base64Decode(post.completionProofBase64), height: 150, width: double.infinity, fit: BoxFit.cover))],
+                  ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(_getProofImageBytes(post.completionProofBase64)!, height: 150, width: double.infinity, fit: BoxFit.cover, gaplessPlayback: true))],
               ])),
           ],
           const SizedBox(height: 20),
@@ -1277,6 +1303,7 @@ class _DetailScreenState extends State<DetailScreen> {
               Expanded(
                 child: TextField(
                   controller: _commentController,
+                  focusNode: _commentFocusNode,
                   style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
                   decoration: InputDecoration(
                     hintText: 'Tulis komentar...',

@@ -38,12 +38,16 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = await _authService.login(email: email, password: password);
+      final user = await _authService.login(email: email, password: password).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('Koneksi timeout, periksa jaringan Anda.'),
+      );
       if (user != null && mounted) {
         // Save FCM token and sync notification preferences for the logged-in user
         final fcmService = FcmService();
-        fcmService.saveTokenForUser(user.uid);
-        fcmService.syncPreferencesForUser(user.uid);
+        fcmService.saveTokenForUser(user.uid).catchError((_) {});
+        fcmService.syncPreferencesForUser(user.uid).catchError((_) {});
+        
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainScaffold()),
@@ -74,12 +78,15 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = await _authService.loginWithGoogle();
+      final user = await _authService.loginWithGoogle().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('Koneksi timeout saat login Google.'),
+      );
 
       if (user != null && mounted) {
         final fcmService = FcmService();
-        await fcmService.saveTokenForUser(user.uid);
-        await fcmService.syncPreferencesForUser(user.uid);
+        fcmService.saveTokenForUser(user.uid).catchError((_) {});
+        fcmService.syncPreferencesForUser(user.uid).catchError((_) {});
 
         Navigator.pushReplacement(
           context,
